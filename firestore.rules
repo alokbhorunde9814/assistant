@@ -1,0 +1,150 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to read and write to their own document in the users collection
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Classes rules
+    match /classes/{classId} {
+      // Helper function to check if the current user is a member of the class
+      function isMember() {
+        return request.auth.uid in resource.data.studentIds;
+      }
+      
+      // Helper function to check if the current user is the owner of the class
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId;
+      }
+      
+      // Allow read if user is authenticated and is owner or member of the class
+      allow read: if request.auth != null && (isOwner() || isMember());
+      
+      // Allow create if user is authenticated (creating user will be set as owner)
+      allow create: if request.auth != null 
+                    && request.resource.data.ownerId == request.auth.uid;
+      
+      // Allow update if user is authenticated and is the owner,
+      // or if they're a student ONLY modifying the studentIds field to remove themselves
+      allow update: if request.auth != null && (
+                      isOwner() ||
+                      (isMember() && 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']) &&
+                       request.resource.data.studentIds.toSet().difference(resource.data.studentIds.toSet()).size() == 0)
+                    );
+      
+      // Allow delete if user is authenticated and is the owner
+      allow delete: if request.auth != null && isOwner();
+    }
+    
+    // Announcements rules
+    match /announcements/{announcementId} {
+      // Helper function to check if the announcement belongs to a class
+      function getClass() {
+        return get(/databases/$(database)/documents/classes/$(resource.data.classId));
+      }
+      
+      // Allow read if user is authenticated and is owner or member of the class
+      allow read: if request.auth != null && (
+                    request.auth.uid == getClass().data.ownerId || 
+                    request.auth.uid in getClass().data.studentIds
+                  );
+      
+      // Allow create if user is authenticated and is the owner of the class
+      allow create: if request.auth != null 
+                    && request.resource.data.authorId == request.auth.uid
+                    && get(/databases/$(database)/documents/classes/$(request.resource.data.classId)).data.ownerId == request.auth.uid;
+      
+      // Allow update/delete if user is authenticated and is the author
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Assignments rules
+    match /assignments/{assignmentId} {
+      // Helper function to check if the assignment belongs to a class
+      function getClass() {
+        return get(/databases/$(database)/documents/classes/$(resource.data.classId));
+      }
+      
+      // Allow read if user is authenticated and is owner or member of the class
+      allow read: if request.auth != null && (
+                    request.auth.uid == getClass().data.ownerId || 
+                    request.auth.uid in getClass().data.studentIds
+                  );
+      
+      // Allow create if user is authenticated and is the owner of the class
+      allow create: if request.auth != null 
+                    && request.resource.data.authorId == request.auth.uid
+                    && get(/databases/$(database)/documents/classes/$(request.resource.data.classId)).data.ownerId == request.auth.uid;
+      
+      // Allow update/delete if user is authenticated and is the author
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Resources rules
+    match /resources/{resourceId} {
+      // Helper function to check if the resource belongs to a class
+      function getClass() {
+        return get(/databases/$(database)/documents/classes/$(resource.data.classId));
+      }
+      
+      // Allow read if user is authenticated and is owner or member of the class
+      allow read: if request.auth != null && (
+                    request.auth.uid == getClass().data.ownerId || 
+                    request.auth.uid in getClass().data.studentIds
+                  );
+      
+      // Allow create if user is authenticated and is the owner of the class
+      allow create: if request.auth != null 
+                    && request.resource.data.authorId == request.auth.uid
+                    && get(/databases/$(database)/documents/classes/$(request.resource.data.classId)).data.ownerId == request.auth.uid;
+      
+      // Allow update/delete if user is authenticated and is the author
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Submissions rules
+    match /submissions/{submissionId} {
+      // Helper function to check if the submission belongs to a class
+      function getClass() {
+        return get(/databases/$(database)/documents/classes/$(resource.data.classId));
+      }
+      
+      // Helper function to check if an assignment exists in the given class
+      function assignmentBelongsToClass() {
+        let assignment = get(/databases/$(database)/documents/assignments/$(resource.data.assignmentId));
+        return assignment.data.classId == resource.data.classId;
+      }
+      
+      // Allow read if user is:
+      // 1. The student who submitted it
+      // 2. The owner of the class
+      allow read: if request.auth != null && (
+                    request.auth.uid == resource.data.studentId || 
+                    request.auth.uid == getClass().data.ownerId
+                  );
+      
+      // Allow create if user is authenticated, is a member of the class, and is submitting their own work
+      allow create: if request.auth != null 
+                    && request.resource.data.studentId == request.auth.uid
+                    && (request.auth.uid in getClass().data.studentIds || request.auth.uid == getClass().data.ownerId)
+                    && assignmentBelongsToClass();
+      
+      // Allow update if:
+      // 1. User is the student who submitted it and is only updating specific fields (resubmission)
+      // 2. User is the class owner and is only updating grade-related fields
+      allow update: if request.auth != null && (
+                    // Student updates (resubmission or notes)
+                    (request.auth.uid == resource.data.studentId && 
+                     request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['fileUrls', 'notes', 'submittedAt', 'status', 'isLatest'])) ||
+                    // Teacher updates (grading)
+                    (request.auth.uid == getClass().data.ownerId && 
+                     request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['status', 'score', 'feedback']))
+                  );
+    }
+  }
+} 
