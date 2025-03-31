@@ -40,6 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
         isHomeScreen: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.chat_bubble),
+            tooltip: 'AI Chat',
+            onPressed: () {
+              Navigator.pushNamed(context, '/vertex-ai-chat');
+            },
+          ),
+          IconButton(
             icon: Icon(Icons.search),
             onPressed: () {
               // Implement search functionality

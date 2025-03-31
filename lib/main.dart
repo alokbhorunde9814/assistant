@@ -9,6 +9,7 @@ import 'auth_wrapper.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'firebase_options.dart';
+import 'widgets/vertex_ai_chat.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +48,7 @@ class MyApp extends StatelessWidget {
           print('Navigating to AuthWrapper route');
           return const AuthWrapper();
         },
+        '/vertex-ai-chat': (context) => const VertexAIChat(),
       },
       // Observe and log navigation events for debugging
       navigatorObservers: [
