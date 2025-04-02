@@ -344,9 +344,9 @@ class DatabaseService {
     required String title,
     required String description,
     required DateTime dueDate,
-    required int totalPoints,
+    required int points,
     bool isAutoGraded = false,
-    List<String> resourceUrls = const [],
+    List<String> fileUrls = const [],
     Map<String, dynamic> aiData = const {},
   }) async {
     try {
@@ -371,9 +371,9 @@ class DatabaseService {
         authorName: _currentUserName,
         createdAt: DateTime.now(),
         dueDate: dueDate,
-        totalPoints: totalPoints,
+        points: points,
         isAutoGraded: isAutoGraded,
-        resourceUrls: resourceUrls,
+        fileUrls: fileUrls,
         aiData: aiData,
       ).toFirestore();
       
@@ -605,6 +605,7 @@ class DatabaseService {
     required List<String> fileUrls,
     String content = '',
     String? notes,
+    required double points,
   }) async {
     try {
       // Get the assignment to check if it exists and is still open for submission
@@ -643,6 +644,7 @@ class DatabaseService {
         submittedAt: DateTime.now(),
         notes: notes,
         isGraded: false,
+        score: points,
       ).toFirestore();
       
       // Add the submission to Firestore

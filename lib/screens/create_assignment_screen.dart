@@ -161,9 +161,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
         title: _titleController.text,
         description: _descriptionController.text,
         dueDate: dueDateTime,
-        totalPoints: int.tryParse(_pointsController.text) ?? 10,
+        points: int.tryParse(_pointsController.text) ?? 10,
         isAutoGraded: _enableAiFeedback,
-        resourceUrls: _attachments,
+        fileUrls: _attachments,
         aiData: {
           ...aiData,
           'taskType': _taskType,
