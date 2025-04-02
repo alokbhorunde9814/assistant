@@ -2,14 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:csv/csv.dart';
-import '../models/class_model.dart';
-import '../models/assignment_model.dart';
-import '../models/submission_model.dart';
-import '../models/student_model.dart';
-import '../services/database_service.dart';
-import '../utils/theme.dart';
-import '../widgets/custom_app_bar.dart';
-import '../widgets/custom_button.dart';
+import 'package:firebase_login/models/assignment_model.dart';
+import 'package:firebase_login/models/class_model.dart';
+import 'package:firebase_login/models/submission_model.dart';
+import 'package:firebase_login/services/database_service.dart';
+import 'package:firebase_login/theme/app_theme.dart';
+import 'package:firebase_login/utils/utils.dart';
+import 'package:firebase_login/widgets/loading_indicator.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -510,7 +509,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> with Si
                         const Icon(Icons.score, size: 16, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
-                          'Score: ${submission.score.toStringAsFixed(1)}/${widget.assignment.points}',
+                          'Score: ${submission.score?.toStringAsFixed(1) ?? 'N/A'}/${widget.assignment.points}',
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                           ),

@@ -132,7 +132,8 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
         assignmentId: widget.assignment.id,
         classId: widget.assignment.classId,
         fileUrls: fileUrls,
-        notes: _notesController.text,
+        content: _notesController.text,
+        points: widget.assignment.points.toDouble(),
       );
       
       setState(() {
@@ -240,7 +241,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final bool isOverdue = widget.assignment.dueDate.isBefore(DateTime.now());
+    final bool isOverdue = widget.assignment.dueDate?.isBefore(DateTime.now()) ?? false;
     final bool canSubmit = !isOverdue || widget.allowResubmit;
     final bool showResubmitOption = _hasSubmitted && widget.allowResubmit;
     
@@ -321,7 +322,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                 const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
                 const SizedBox(width: 8),
                 Text(
-                  'Deadline: ${_formatDueDate(widget.assignment.dueDate)}',
+                  'Deadline: ${_formatDueDate(widget.assignment.dueDate ?? DateTime.now())}',
                   style: TextStyle(
                     fontSize: 15,
                     color: widget.assignment.isOverdue ? Colors.red : Colors.black87,
@@ -336,7 +337,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                 const Icon(Icons.score, size: 18, color: Colors.grey),
                 const SizedBox(width: 8),
                 Text(
-                  'Points: ${widget.assignment.totalPoints}',
+                  'Points: ${widget.assignment.points}',
                   style: const TextStyle(fontSize: 15),
                 ),
               ],
@@ -395,7 +396,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     IconData statusIcon;
     
     switch (status) {
-      case SubmissionStatus.pending:
+      case SubmissionStatus.notSubmitted:
         statusColor = Colors.orange;
         statusText = 'Pending';
         statusIcon = Icons.hourglass_empty;
@@ -410,12 +411,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
         statusText = 'Graded';
         statusIcon = Icons.star;
         break;
-      case SubmissionStatus.late:
-        statusColor = Colors.red;
-        statusText = 'Submitted Late';
-        statusIcon = Icons.warning;
-        break;
-      case SubmissionStatus.resubmitted:
+      case SubmissionStatus.returned:
         statusColor = Colors.purple;
         statusText = 'Resubmitted';
         statusIcon = Icons.repeat;
@@ -484,7 +480,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                   ),
                 );
               }).toList(),
-              if (_latestSubmission!.notes.isNotEmpty) ...[
+              if (_latestSubmission!.notes?.isNotEmpty ?? false) ...[
                 const SizedBox(height: 12),
                 const Text(
                   'Notes:',
@@ -494,7 +490,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(_latestSubmission!.notes),
+                Text(_latestSubmission!.notes ?? ''),
               ],
               if (_latestSubmission!.status == SubmissionStatus.graded) ...[
                 const SizedBox(height: 16),
@@ -516,7 +512,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Grade: ${_latestSubmission!.score}/${widget.assignment.totalPoints}',
+                            'Grade: ${_latestSubmission!.score}/${widget.assignment.points}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.blue.shade700,
@@ -769,7 +765,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Suggested Score: ${aiFeedback['score']}/${widget.assignment.totalPoints}',
+                  'Suggested Score: ${aiFeedback['score']}/${widget.assignment.points}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.amber.shade800,
@@ -925,7 +921,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                             ),
                             if (submission.status == SubmissionStatus.graded) 
                               Text(
-                                'Grade: ${submission.score}/${widget.assignment.totalPoints}',
+                                'Grade: ${submission.score}/${widget.assignment.points}',
                                 style: const TextStyle(fontSize: 13),
                               ),
                           ],
@@ -971,25 +967,21 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     IconData icon;
     
     switch (status) {
-      case SubmissionStatus.pending:
+      case SubmissionStatus.notSubmitted:
         color = Colors.orange;
-        icon = Icons.hourglass_empty;
+        icon = Icons.assignment_late;
         break;
       case SubmissionStatus.submitted:
         color = Colors.green;
-        icon = Icons.check_circle;
+        icon = Icons.assignment_turned_in;
         break;
       case SubmissionStatus.graded:
         color = Colors.blue;
-        icon = Icons.star;
+        icon = Icons.grading;
         break;
-      case SubmissionStatus.late:
-        color = Colors.red;
-        icon = Icons.warning;
-        break;
-      case SubmissionStatus.resubmitted:
+      case SubmissionStatus.returned:
         color = Colors.purple;
-        icon = Icons.repeat;
+        icon = Icons.assignment_return;
         break;
     }
     

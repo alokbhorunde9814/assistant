@@ -1778,7 +1778,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                               ),
                             ),
                             Text(
-                              'Points: ${assignment.totalPoints}',
+                              'Points: ${assignment.points}',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 12,
