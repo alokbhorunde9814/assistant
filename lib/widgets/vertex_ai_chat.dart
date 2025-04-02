@@ -1,5 +1,19 @@
 import 'package:flutter/material.dart';
 import '../services/vertex_ai_service.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final bool isError;
+
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.isError = false,
+  });
+}
 
 class VertexAIChat extends StatefulWidget {
   const VertexAIChat({super.key});
@@ -9,58 +23,82 @@ class VertexAIChat extends StatefulWidget {
 }
 
 class _VertexAIChatState extends State<VertexAIChat> {
-  final TextEditingController _promptController = TextEditingController();
-  final List<String> _messages = [];
+  final List<ChatMessage> _messages = [];
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  late final VertexAIService _vertexAIService;
+  bool _isInitialized = false;
   bool _isLoading = false;
-  final VertexAIService _vertexAIService = VertexAIService();
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _initializeVertexAI();
+    _loadCredentials();
   }
 
-  Future<void> _initializeVertexAI() async {
+  Future<void> _loadCredentials() async {
     try {
-      // Load the credentials file
-      final String credentialsJson = await DefaultAssetBundle.of(context).loadString('assets/credentials/vertex_ai_credentials.json');
-      await _vertexAIService.initialize(credentialsJson);
+      final credentialsJson = await rootBundle.loadString('assets/credentials/vertex_ai_credentials.json');
+      final credentialsMap = json.decode(credentialsJson) as Map<String, dynamic>;
+      _vertexAIService = VertexAIService();
+      await _vertexAIService.initialize(credentialsMap);
       setState(() {
-        _messages.add('AI: Vertex AI initialized successfully. How can I help you today?');
+        _isInitialized = true;
+        _messages.add(ChatMessage(
+          text: 'Vertex AI initialized successfully. How can I help you today?',
+          isUser: false,
+        ));
       });
     } catch (e) {
+      print('Error loading credentials: $e');
       setState(() {
-        _messages.add('Error: Failed to initialize Vertex AI. Please check the following:\n'
-            '1. Make sure the Vertex AI API is enabled in your Google Cloud Console\n'
-            '2. Verify that your service account has the necessary permissions\n'
-            '3. Check if your credentials file is properly formatted\n\n'
-            'Error details: $e');
+        _error = 'Failed to initialize Vertex AI: $e';
+        _messages.add(ChatMessage(
+          text: 'Error: Failed to initialize Vertex AI. Please check the following:\n'
+              '1. Make sure the Vertex AI API is enabled in your Google Cloud Console\n'
+              '2. Verify that your service account has the necessary permissions\n'
+              '3. Check if your credentials file is properly formatted\n\n'
+              'Error details: $e',
+          isUser: false,
+          isError: true,
+        ));
       });
     }
   }
 
   Future<void> _sendMessage() async {
-    if (_promptController.text.isEmpty) return;
+    if (_textController.text.isEmpty) return;
 
     setState(() {
-      _messages.add('You: ${_promptController.text}');
+      _messages.add(ChatMessage(
+        text: 'You: ${_textController.text}',
+        isUser: true,
+      ));
       _isLoading = true;
     });
 
     try {
-      final response = await _vertexAIService.generateText(_promptController.text);
+      final response = await _vertexAIService.generateText(_textController.text);
       setState(() {
-        _messages.add('AI: $response');
+        _messages.add(ChatMessage(
+          text: 'AI: $response',
+          isUser: false,
+        ));
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _messages.add('Error: $e');
+        _messages.add(ChatMessage(
+          text: 'Error: $e',
+          isUser: false,
+          isError: true,
+        ));
         _isLoading = false;
       });
     }
 
-    _promptController.clear();
+    _textController.clear();
   }
 
   @override
@@ -80,7 +118,7 @@ class _VertexAIChatState extends State<VertexAIChat> {
                 padding: const EdgeInsets.all(16.0),
                 itemBuilder: (context, index) {
                   final message = _messages[index];
-                  final isUserMessage = message.startsWith('You: ');
+                  final isUserMessage = message.isUser;
                   
                   return Align(
                     alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
@@ -92,7 +130,7 @@ class _VertexAIChatState extends State<VertexAIChat> {
                         borderRadius: BorderRadius.circular(12.0),
                       ),
                       child: Text(
-                        message,
+                        message.text,
                         style: TextStyle(
                           color: isUserMessage ? Colors.white : Colors.black,
                         ),
@@ -113,7 +151,7 @@ class _VertexAIChatState extends State<VertexAIChat> {
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _promptController,
+                      controller: _textController,
                       decoration: const InputDecoration(
                         hintText: 'Enter your message...',
                         border: OutlineInputBorder(),
@@ -137,7 +175,7 @@ class _VertexAIChatState extends State<VertexAIChat> {
 
   @override
   void dispose() {
-    _promptController.dispose();
+    _textController.dispose();
     _vertexAIService.dispose();
     super.dispose();
   }

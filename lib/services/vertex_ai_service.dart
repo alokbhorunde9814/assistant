@@ -12,11 +12,10 @@ class VertexAIService {
   late final String _projectId;
   bool _isInitialized = false;
 
-  Future<void> initialize(String credentialsJson) async {
+  Future<void> initialize(Map<String, dynamic> credentialsMap) async {
     if (_isInitialized) return;
 
     try {
-      final credentialsMap = json.decode(credentialsJson);
       _credentials = ServiceAccountCredentials.fromJson(credentialsMap);
       _projectId = credentialsMap['project_id'];
       
