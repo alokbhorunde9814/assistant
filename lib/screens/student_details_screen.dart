@@ -29,6 +29,53 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
   String? _errorMessage;
   late TabController _tabController;
 
+  // Get class-specific gradient colors based on class name
+  List<Color> get classGradientColors {
+    final String firstChar = widget.classModel.name.isNotEmpty ? widget.classModel.name[0].toUpperCase() : 'A';
+    final int colorSeed = firstChar.codeUnitAt(0) % 6; // Use 6 different color schemes
+    
+    if (widget.isTeacher) {
+      // Blue-based gradients for created classes
+      switch (colorSeed) {
+        case 0:
+          return [const Color(0xFF1A73E8), const Color(0xFF3C8CE7)]; // Google blue
+        case 1:
+          return [const Color(0xFF4285F4), const Color(0xFF5C9EFF)]; // Light blue
+        case 2:
+          return [const Color(0xFF2979FF), const Color(0xFF448AFF)]; // Material blue
+        case 3:
+          return [const Color(0xFF0277BD), const Color(0xFF039BE5)]; // Sky blue
+        case 4:
+          return [const Color(0xFF0288D1), const Color(0xFF29B6F6)]; // Light blue accent
+        case 5:
+          return [const Color(0xFF1565C0), const Color(0xFF42A5F5)]; // Blue to light blue
+        default:
+          return [const Color(0xFF1A73E8), const Color(0xFF3C8CE7)]; // Default blue
+      }
+    } else {
+      // Purple-based gradients for joined classes
+      switch (colorSeed) {
+        case 0:
+          return [const Color(0xFF8E24AA), const Color(0xFFAB47BC)]; // Light purple
+        case 1:
+          return [const Color(0xFF7B1FA2), const Color(0xFF9C27B0)]; // Medium purple
+        case 2:
+          return [const Color(0xFF6A1B9A), const Color(0xFF8E24AA)]; // Dark purple
+        case 3:
+          return [const Color(0xFF5E35B1), const Color(0xFF7986CB)]; // Indigo to purple
+        case 4:
+          return [const Color(0xFF9C27B0), const Color(0xFFCE93D8)]; // Purple to light purple
+        case 5:
+          return [const Color(0xFF7E57C2), const Color(0xFF9575CD)]; // Deep purple to light
+        default:
+          return [const Color(0xFF7B1FA2), const Color(0xFF9C27B0)]; // Default purple
+      }
+    }
+  }
+
+  // Get primary color for the class for other UI elements
+  Color get classPrimaryColor => classGradientColors.first;
+
   @override
   void initState() {
     super.initState();
@@ -72,13 +119,15 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
     return Scaffold(
       appBar: AppBar(
         title: Text(isCurrentUser ? 'My Profile' : 'Student Profile'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: classPrimaryColor,
+        elevation: 1,
+        iconTheme: IconThemeData(color: classPrimaryColor),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          indicatorColor: classPrimaryColor,
+          labelColor: classPrimaryColor,
+          unselectedLabelColor: Colors.grey.shade600,
           tabs: const [
             Tab(text: 'Profile'),
             Tab(text: 'Progress'),
@@ -150,7 +199,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: classPrimaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -189,7 +238,9 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
 
   Widget _buildProgressTab() {
     return _isLoading
-        ? const Center(child: CircularProgressIndicator())
+        ? Center(child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(classPrimaryColor),
+          ))
         : _errorMessage != null
             ? Center(
                 child: Padding(
@@ -221,7 +272,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
                       ElevatedButton(
                         onPressed: _loadStudentProgress,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: classPrimaryColor,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Try Again'),
@@ -296,7 +347,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: classPrimaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -312,7 +363,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
       children: [
         CircleAvatar(
           radius: 50,
-          backgroundColor: AppTheme.secondaryColor.withOpacity(0.2),
+          backgroundColor: classPrimaryColor,
           backgroundImage: widget.student.photoUrl != null
               ? NetworkImage(widget.student.photoUrl!)
               : null,
@@ -324,7 +375,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
                   style: const TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.secondaryColor,
+                    color: Colors.white,
                   ),
                 )
               : null,
@@ -351,14 +402,17 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: classGradientColors,
+              ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
             ),
             child: const Text(
               'You',
               style: TextStyle(
-                color: AppTheme.primaryColor,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -380,10 +434,10 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: classPrimaryColor,
               ),
             ),
             const SizedBox(height: 16),
@@ -439,12 +493,12 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Progress Overview',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: classPrimaryColor,
               ),
             ),
             const SizedBox(height: 24),
@@ -455,7 +509,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
                     'Assignments',
                     '$completedAssignments/$totalAssignments',
                     Icons.assignment,
-                    AppTheme.primaryColor,
+                    classPrimaryColor,
                   ),
                 ),
                 Expanded(
@@ -490,12 +544,12 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Strengths & Areas for Improvement',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: classPrimaryColor,
               ),
             ),
             const SizedBox(height: 16),
@@ -554,12 +608,12 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Assignment Completion',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
+                color: classPrimaryColor,
               ),
             ),
             const SizedBox(height: 16),
@@ -574,10 +628,10 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
                 ),
                 Text(
                   '${completionRate.toStringAsFixed(0)}%',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
+                    color: classPrimaryColor,
                   ),
                 ),
               ],
@@ -586,7 +640,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
             LinearProgressIndicator(
               value: totalAssignments > 0 ? completedAssignments / totalAssignments : 0,
               backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              valueColor: AlwaysStoppedAnimation<Color>(classPrimaryColor),
               minHeight: 8,
               borderRadius: BorderRadius.circular(4),
             ),
@@ -666,9 +720,12 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey,
+            ),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
               try {
@@ -693,7 +750,10 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> with Single
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Remove'),
           ),
         ],

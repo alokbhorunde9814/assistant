@@ -45,5 +45,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- File picker permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app requires access to the photo library for selecting and uploading files</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app requires access to the camera to take photos for submission</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires access to the microphone for recording audio for submission</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app requires access to the documents folder for file selection</string>
 </dict>
 </plist>

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../screens/profile_screen.dart';
 import '../screens/edit_profile_screen.dart';
+import '../screens/search_screen.dart';
+import '../utils/theme.dart';
+import '../utils/constants.dart';
 
 class CommonLayout extends StatelessWidget {
   final String title;
@@ -44,6 +47,31 @@ class CommonLayout extends StatelessWidget {
     this.onNotificationTap,
   });
 
+  // Show confirmation dialog before logging out
+  Future<bool> _confirmLogout(BuildContext context) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Out'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -53,12 +81,12 @@ class CommonLayout extends StatelessWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            const Icon(Icons.menu_book, color: Color(0xFF6A11CB)),
+            Icon(Icons.menu_book, color: AppTheme.primaryColor),
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
-                color: Color(0xFF6A11CB),
+              style: TextStyle(
+                color: AppTheme.primaryColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -68,12 +96,12 @@ class CommonLayout extends StatelessWidget {
         elevation: 1,
         leading: showBackButton
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF6A11CB)),
+                icon: Icon(Icons.arrow_back, color: AppTheme.primaryColor),
                 onPressed: onBackPressed ?? () => Navigator.pop(context),
               )
             : showDrawer
                 ? IconButton(
-                    icon: const Icon(Icons.menu, color: Color(0xFF6A11CB)),
+                    icon: Icon(Icons.menu, color: AppTheme.primaryColor),
                     onPressed: () {
                       if (scaffoldKey != null) {
                         scaffoldKey!.currentState?.openDrawer();
@@ -82,12 +110,25 @@ class CommonLayout extends StatelessWidget {
                   )
                 : null,
         actions: [
+          IconButton(
+            icon: Icon(Icons.search, color: AppTheme.primaryColor),
+            onPressed: () {
+              print('Search icon clicked');
+              // Use direct navigation instead of named route
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              ).then((value) {
+                print('Returned from SearchScreen');
+              });
+            },
+          ),
           if (showNotification)
             Stack(
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined, color: Color(0xFF6A11CB)),
+                  icon: Icon(Icons.notifications_outlined, color: AppTheme.primaryColor),
                   onPressed: onNotificationTap ?? () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Notifications')),
@@ -125,7 +166,7 @@ class CommonLayout extends StatelessWidget {
               child: CircleAvatar(
                 radius: 16,
                 backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-                backgroundColor: const Color(0xFFE85CD3),
+                backgroundColor: AppTheme.primaryColor,
                 child: user.photoURL == null
                     ? Text(
                         user.displayName?.isNotEmpty == true
@@ -150,21 +191,30 @@ class CommonLayout extends StatelessWidget {
           if (showSearch)
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: searchHint,
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SearchScreen()),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  onChanged: onSearch,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: Colors.grey.shade600),
+                      const SizedBox(width: 10),
+                      Text(
+                        searchHint,
+                        style: TextStyle(color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -184,15 +234,8 @@ class CommonLayout extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF6A11CB),
-                  Color(0xFFE85CD3),
-                ],
-              ),
+            decoration: BoxDecoration(
+              gradient: AppTheme.gradientDecoration.gradient,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +252,7 @@ class CommonLayout extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF6A11CB),
+                            color: AppTheme.primaryBlue,
                           ),
                         )
                       : null,
@@ -238,6 +281,17 @@ class CommonLayout extends StatelessWidget {
             title: const Text('Home'),
             onTap: () {
               Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.search),
+            title: const Text('Search'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
             },
           ),
           ListTile(
@@ -303,6 +357,12 @@ class CommonLayout extends StatelessWidget {
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
+              // Show confirmation dialog
+              final bool confirmLogout = await _confirmLogout(context);
+              
+              // If user cancels, don't proceed
+              if (!confirmLogout) return;
+              
               try {
                 await authService.signOut();
                 Navigator.pop(context);
@@ -325,7 +385,7 @@ class CommonLayout extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: currentNavIndex,
       onTap: onNavIndexChanged,
-      selectedItemColor: const Color(0xFF6A11CB),
+      selectedItemColor: AppTheme.primaryColor,
       unselectedItemColor: Colors.grey.shade600,
       type: BottomNavigationBarType.fixed,
       items: [
@@ -387,7 +447,7 @@ class CommonLayout extends StatelessWidget {
             CircleAvatar(
               radius: 40,
               backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
-              backgroundColor: const Color(0xFFE85CD3),
+              backgroundColor: AppTheme.primaryColor,
               child: user?.photoURL == null
                   ? Text(
                       user?.displayName?.isNotEmpty == true
@@ -453,6 +513,12 @@ class CommonLayout extends StatelessWidget {
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () async {
+                // Show confirmation dialog
+                final bool confirmLogout = await _confirmLogout(context);
+                
+                // If user cancels, don't proceed
+                if (!confirmLogout) return;
+                
                 try {
                   await authService.signOut();
                   Navigator.pop(context);

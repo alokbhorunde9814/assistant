@@ -5,6 +5,7 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
+import 'screens/search_screen.dart';
 import 'auth_wrapper.dart';
 import 'utils/theme.dart';
 import 'utils/constants.dart';
@@ -13,6 +14,7 @@ import 'widgets/vertex_ai_chat.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -29,7 +31,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('Building MyApp widget');
     return MaterialApp(
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,
@@ -44,6 +45,10 @@ class MyApp extends StatelessWidget {
         AppConstants.loginRoute: (context) => const LoginScreen(),
         AppConstants.profileRoute: (context) => const ProfileScreen(),
         AppConstants.editProfileRoute: (context) => const EditProfileScreen(),
+        AppConstants.searchRoute: (context) {
+          print('Navigating to SearchScreen route');
+          return const SearchScreen();
+        },
         '/auth': (context) {
           print('Navigating to AuthWrapper route');
           return const AuthWrapper();

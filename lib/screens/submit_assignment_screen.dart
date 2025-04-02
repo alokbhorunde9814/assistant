@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import '../models/assignment_model.dart';
 import '../models/submission_model.dart';
 import '../services/database_service.dart';
+import '../services/file_service.dart';
 import '../utils/error_handler.dart';
 import '../utils/theme.dart';
 import '../widgets/custom_button.dart';
@@ -26,15 +28,17 @@ class SubmitAssignmentScreen extends StatefulWidget {
 
 class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   final DatabaseService _databaseService = DatabaseService();
+  final FileService _fileService = FileService();
   final TextEditingController _notesController = TextEditingController();
   
   bool _isLoading = true;
   String? _errorMessage;
-  List<String> _selectedFiles = [];
+  List<PlatformFile> _selectedFiles = [];
   List<SubmissionModel> _previousSubmissions = [];
   SubmissionModel? _latestSubmission;
   bool _hasSubmitted = false;
   bool _showPreviousSubmissions = false;
+  bool _uploadingFiles = false;
   
   @override
   void initState() {
@@ -107,21 +111,27 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     
     setState(() {
       _isLoading = true;
+      _uploadingFiles = true;
       _errorMessage = null;
     });
     
     try {
-      // In a real app, you'd upload the files to storage here
-      // For this demo, we'll just use mock file URLs
-      final mockFileUrls = _selectedFiles.map((filename) => 
-        'https://example.com/submissions/${widget.assignment.id}/$filename'
-      ).toList();
+      // Upload the files to Firebase Storage
+      final fileUrls = await _fileService.uploadFiles(
+        _selectedFiles,
+        widget.assignment.id,
+        widget.assignment.classId,
+      );
+      
+      setState(() {
+        _uploadingFiles = false;
+      });
       
       // Submit the assignment
       final submission = await _databaseService.submitAssignment(
         assignmentId: widget.assignment.id,
         classId: widget.assignment.classId,
-        fileUrls: mockFileUrls,
+        fileUrls: fileUrls,
         notes: _notesController.text,
       );
       
@@ -146,14 +156,53 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     } finally {
       setState(() {
         _isLoading = false;
+        _uploadingFiles = false;
       });
     }
   }
   
-  void _addFile(String filename) {
-    setState(() {
-      _selectedFiles.add(filename);
-    });
+  Future<void> _pickFiles() async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Opening file browser...')),
+      );
+      
+      // Configure file picker to directly open device file browser
+      final files = await _fileService.pickFiles(
+        allowMultiple: true,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'],
+      );
+      
+      // Clear the loading indicator
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
+      if (files != null && files.isNotEmpty) {
+        setState(() {
+          _selectedFiles.addAll(files);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Added ${files.length} file(s)')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      if (e.toString().contains('MissingPluginException')) {
+        // Handle file picker issues on Android
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'There was an issue with the file picker on your device. Please try again later.'
+            ),
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error selecting files: $e')),
+        );
+      }
+    }
   }
   
   void _removeFile(int index) {
@@ -162,14 +211,11 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     });
   }
   
-  void _captureAndSubmit() {
-    // In a real app, this would open the camera
-    // For this demo, we'll just add a mock file
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    _addFile('photo_$timestamp.jpg');
-    
+  Future<void> _captureImage() async {
+    // In a real app, this would use image_picker to capture images
+    // For now, just show a message that it's not implemented
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Photo captured successfully')),
+      const SnackBar(content: Text('Camera capture is not implemented in this demo')),
     );
   }
   
@@ -204,7 +250,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
         title: 'Submit Assignment',
         isHomeScreen: false,
       ),
-      body: _isLoading
+      body: _isLoading && !_uploadingFiles
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -517,6 +563,24 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
               ),
             ),
             const Divider(height: 24),
+            
+            // File Upload Progress
+            if (_uploadingFiles)
+              Column(
+                children: [
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Uploading files...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            
             // Selected Files
             if (_selectedFiles.isNotEmpty) ...[
               const Text(
@@ -527,44 +591,67 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              ...List.generate(_selectedFiles.length, (index) {
-                final filename = _selectedFiles[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getFileIcon(filename),
-                        size: 16,
-                        color: Colors.grey,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: List.generate(_selectedFiles.length, (index) {
+                    final file = _selectedFiles[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getFileIcon(file.name),
+                            size: 20,
+                            color: AppTheme.primaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  file.name,
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '${(file.size / 1024).toStringAsFixed(1)} KB',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: _uploadingFiles ? null : () => _removeFile(index),
+                            color: Colors.red.shade400,
+                            tooltip: 'Remove file',
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(filename)),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 16),
-                        onPressed: () => _removeFile(index),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+                    );
+                  }),
+                ),
+              ),
               const SizedBox(height: 16),
             ],
+            
             // Add File Button
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    icon: const Icon(Icons.file_upload),
-                    label: const Text('Attach File'),
-                    onPressed: () {
-                      // In a real app, this would open a file picker
-                      // For this demo, we'll just add a mock file
-                      final timestamp = DateTime.now().millisecondsSinceEpoch;
-                      _addFile('assignment_$timestamp.pdf');
-                    },
+                    icon: const Icon(Icons.folder_open),
+                    label: const Text('Attach Files'),
+                    onPressed: _uploadingFiles ? null : _pickFiles,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.secondaryColor,
                       foregroundColor: Colors.white,
@@ -580,7 +667,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('Take Photo'),
-                    onPressed: _captureAndSubmit,
+                    onPressed: _uploadingFiles ? null : _captureImage,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
@@ -605,6 +692,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                 contentPadding: const EdgeInsets.all(16),
               ),
               maxLines: 3,
+              enabled: !_uploadingFiles,
             ),
             const SizedBox(height: 24),
             // Submit Button

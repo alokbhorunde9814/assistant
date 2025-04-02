@@ -2,24 +2,29 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Brand Colors
-  static const primaryColor = Color(0xFF6A11CB);
-  static const secondaryColor = Color(0xFFE85CD3);
-  static const accentColor = Color(0xFFFF9D50);
+  static const primaryBlue = Color(0xFF1E88E5);
+  static const primaryGreen = Color(0xFF26A69A);
+  static const primaryYellow = Color(0xFFFDD835);
+  
+  // Map to legacy color names to avoid breaking existing code
+  static const primaryColor = primaryBlue;
+  static const secondaryColor = primaryGreen;
+  static const textPrimary = lightTextPrimary;
+  static const textSecondary = lightTextSecondary;
   
   // Background Gradient
-  static const gradientStart = Color(0xFF6A11CB);
-  static const gradientMiddle = Color(0xFFE85CD3);
-  static const gradientEnd = Color(0xFFFF9D50);
+  static const gradientStart = Color(0xFF1E88E5); // Blue
+  static const gradientMiddle = Color(0xFF26A69A); // Green
+  static const gradientEnd = Color(0xFFFDD835);    // Yellow
   
-  // Text Colors
-  static const textPrimary = Color(0xFF2A2A2A);
-  static const textSecondary = Color(0xFF6C6C6C);
-  static const textMuted = Color(0xFF9E9E9E);
-  
-  // Background Colors
-  static const backgroundLight = Color(0xFFF8F9FA);
-  static const backgroundWhite = Colors.white;
-  static const cardBackground = Colors.white;
+  // Light Theme Colors
+  static const lightTextPrimary = Color(0xFF2A2A2A);
+  static const lightTextSecondary = Color(0xFF6C6C6C);
+  static const lightTextMuted = Color(0xFF9E9E9E);
+  static const lightBackgroundLight = Color(0xFFF8F9FA);
+  static const lightBackgroundWhite = Colors.white;
+  static const lightCardBackground = Colors.white;
+  static const lightDivider = Color(0xFFEEEEEE);
   
   // Status Colors
   static const success = Color(0xFF4CAF50);
@@ -33,73 +38,76 @@ class AppTheme {
   static const double paddingLarge = 24.0;
   static const double borderRadius = 12.0;
   
-  // Text Styles
-  static const TextStyle headingLarge = TextStyle(
+  // Text Styles for Light Theme
+  static TextStyle _headingLargeLight = const TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.bold,
-    color: textPrimary,
+    color: lightTextPrimary,
   );
   
-  static const TextStyle headingMedium = TextStyle(
+  static TextStyle _headingMediumLight = const TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.bold,
-    color: textPrimary,
+    color: lightTextPrimary,
   );
   
-  static const TextStyle headingSmall = TextStyle(
+  static TextStyle _headingSmallLight = const TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.bold,
-    color: textPrimary,
+    color: lightTextPrimary,
   );
   
-  static const TextStyle bodyLarge = TextStyle(
+  static TextStyle _bodyLargeLight = const TextStyle(
     fontSize: 16,
-    color: textPrimary,
+    color: lightTextPrimary,
   );
   
-  static const TextStyle bodyMedium = TextStyle(
+  static TextStyle _bodyMediumLight = const TextStyle(
     fontSize: 14,
-    color: textPrimary,
+    color: lightTextPrimary,
   );
   
-  static const TextStyle bodySmall = TextStyle(
+  static TextStyle _bodySmallLight = const TextStyle(
     fontSize: 12,
-    color: textSecondary,
+    color: lightTextSecondary,
   );
   
+  // Button Text Style
   static const TextStyle buttonText = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.5,
   );
   
-  // Main Theme Data
+  // Light Theme
   static ThemeData lightTheme = ThemeData(
+    brightness: Brightness.light,
     // Base colors
-    primaryColor: primaryColor,
+    primaryColor: primaryBlue,
     colorScheme: ColorScheme.light(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      surface: backgroundWhite,
-      background: backgroundLight,
+      primary: primaryBlue,
+      secondary: primaryGreen,
+      tertiary: primaryYellow,
+      surface: lightBackgroundWhite,
+      background: lightBackgroundLight,
       error: error,
     ),
     
     // Text theme
-    textTheme: const TextTheme(
-      displayLarge: headingLarge,
-      displayMedium: headingMedium,
-      displaySmall: headingSmall,
-      bodyLarge: bodyLarge,
-      bodyMedium: bodyMedium,
-      bodySmall: bodySmall,
+    textTheme: TextTheme(
+      displayLarge: _headingLargeLight,
+      displayMedium: _headingMediumLight,
+      displaySmall: _headingSmallLight,
+      bodyLarge: _bodyLargeLight,
+      bodyMedium: _bodyMediumLight,
+      bodySmall: _bodySmallLight,
       labelLarge: buttonText,
     ),
     
     // Button themes
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
+        backgroundColor: primaryBlue,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         shape: RoundedRectangleBorder(
@@ -111,8 +119,8 @@ class AppTheme {
     
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: primaryColor,
-        side: const BorderSide(color: primaryColor),
+        foregroundColor: primaryBlue,
+        side: const BorderSide(color: primaryBlue),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
@@ -122,7 +130,7 @@ class AppTheme {
     
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: primaryColor,
+        foregroundColor: primaryBlue,
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
     ),
@@ -138,7 +146,7 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
-        borderSide: const BorderSide(color: primaryColor, width: 2),
+        borderSide: const BorderSide(color: primaryBlue, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -152,7 +160,7 @@ class AppTheme {
     
     // Card theme
     cardTheme: CardTheme(
-      color: cardBackground,
+      color: lightCardBackground,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -161,38 +169,41 @@ class AppTheme {
     
     // AppBar theme
     appBarTheme: const AppBarTheme(
-      backgroundColor: backgroundWhite,
-      foregroundColor: primaryColor,
-      elevation: 0,
+      backgroundColor: lightBackgroundWhite,
+      foregroundColor: lightTextPrimary,
+      elevation: 0.5,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        color: primaryColor,
-        fontSize: 20,
+        color: lightTextPrimary,
+        fontSize: 18,
         fontWeight: FontWeight.bold,
       ),
-      iconTheme: IconThemeData(color: primaryColor),
+      iconTheme: IconThemeData(color: lightTextPrimary),
     ),
     
     // Bottom navigation bar theme
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: backgroundWhite,
-      selectedItemColor: primaryColor,
+      backgroundColor: lightBackgroundWhite,
+      selectedItemColor: primaryBlue,
       unselectedItemColor: Colors.grey.shade600,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
     
+    // Divider color
+    dividerColor: lightDivider,
+    
     // Scaffold background color
-    scaffoldBackgroundColor: backgroundLight,
+    scaffoldBackgroundColor: lightBackgroundLight,
     
     // Misc
-    splashColor: primaryColor.withOpacity(0.1),
-    highlightColor: primaryColor.withOpacity(0.05),
+    splashColor: primaryBlue.withOpacity(0.1),
+    highlightColor: primaryBlue.withOpacity(0.05),
   );
   
   // Common Gradient Decoration
-  static BoxDecoration gradientDecoration = const BoxDecoration(
-    gradient: LinearGradient(
+  static final gradientDecoration = BoxDecoration(
+    gradient: const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
@@ -200,6 +211,7 @@ class AppTheme {
         gradientMiddle,
         gradientEnd,
       ],
+      stops: [0.0, 0.5, 1.0],
     ),
   );
   
@@ -210,7 +222,7 @@ class AppTheme {
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: primaryColor,
+            color: primaryBlue,
             width: 2,
           ),
         ),
@@ -220,7 +232,7 @@ class AppTheme {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: primaryColor,
+          color: primaryBlue,
         ),
       ),
     );

@@ -7,6 +7,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final double elevation;
   final Color? backgroundColor;
+  final Color? foregroundColor;
   
   const CustomAppBar({
     Key? key,
@@ -15,6 +16,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.elevation = 0.5,
     this.backgroundColor,
+    this.foregroundColor,
   }) : super(key: key);
 
   @override
@@ -41,8 +43,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       centerTitle: isHomeScreen, // Center title only on home screen
       elevation: elevation,
       backgroundColor: backgroundColor ?? Colors.white,
-      foregroundColor: Colors.black,
-      iconTheme: const IconThemeData(color: Colors.black),
+      foregroundColor: foregroundColor ?? Colors.black,
+      iconTheme: IconThemeData(color: foregroundColor ?? Colors.black),
       
       // Custom back button - show on every screen except home screen
       automaticallyImplyLeading: false, // Disable default back button

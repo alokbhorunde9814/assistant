@@ -12,6 +12,7 @@ class AppConstants {
   static const String splashRoute = '/splash';
   static const String profileRoute = '/profile';
   static const String editProfileRoute = '/edit_profile';
+  static const String searchRoute = '/search';
   
   // Storage Keys
   static const String tokenKey = 'auth_token';

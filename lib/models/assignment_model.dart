@@ -8,11 +8,12 @@ class AssignmentModel {
   final String authorId;
   final String authorName;
   final DateTime createdAt;
-  final DateTime dueDate;
-  final int totalPoints;
+  final DateTime? dueDate;
+  final int points;
   final bool isAutoGraded;
-  final List<String> resourceUrls;
+  final List<String> fileUrls;
   final Map<String, dynamic> aiData; // Stores AI-related data for grading
+  final String creatorName; // This is the same as authorName for consistency
 
   AssignmentModel({
     required this.id,
@@ -22,12 +23,13 @@ class AssignmentModel {
     required this.authorId,
     required this.authorName,
     required this.createdAt,
-    required this.dueDate,
-    required this.totalPoints,
+    this.dueDate,
+    this.points = 100,
     this.isAutoGraded = false,
-    this.resourceUrls = const [],
+    this.fileUrls = const [],
     this.aiData = const {},
-  });
+    String? creatorName,
+  }) : creatorName = creatorName ?? authorName;
 
   // Create an empty assignment with default values
   factory AssignmentModel.empty() {
@@ -40,7 +42,7 @@ class AssignmentModel {
       authorName: '',
       createdAt: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 7)),
-      totalPoints: 100,
+      points: 100,
     );
   }
 
@@ -55,11 +57,12 @@ class AssignmentModel {
       authorId: data['authorId'] ?? '',
       authorName: data['authorName'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      dueDate: (data['dueDate'] as Timestamp?)?.toDate() ?? DateTime.now().add(const Duration(days: 7)),
-      totalPoints: data['totalPoints'] ?? 100,
+      dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
+      points: data['points'] ?? data['totalPoints'] ?? 100,
       isAutoGraded: data['isAutoGraded'] ?? false,
-      resourceUrls: List<String>.from(data['resourceUrls'] ?? []),
+      fileUrls: List<String>.from(data['fileUrls'] ?? data['resourceUrls'] ?? []),
       aiData: data['aiData'] ?? {},
+      creatorName: data['creatorName'] ?? data['authorName'] ?? '',
     );
   }
 
@@ -72,11 +75,12 @@ class AssignmentModel {
       'authorId': authorId,
       'authorName': authorName,
       'createdAt': Timestamp.fromDate(createdAt),
-      'dueDate': Timestamp.fromDate(dueDate),
-      'totalPoints': totalPoints,
+      'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
+      'points': points,
       'isAutoGraded': isAutoGraded,
-      'resourceUrls': resourceUrls,
+      'fileUrls': fileUrls,
       'aiData': aiData,
+      'creatorName': creatorName,
     };
   }
 
@@ -90,10 +94,11 @@ class AssignmentModel {
     String? authorName,
     DateTime? createdAt,
     DateTime? dueDate,
-    int? totalPoints,
+    int? points,
     bool? isAutoGraded,
-    List<String>? resourceUrls,
+    List<String>? fileUrls,
     Map<String, dynamic>? aiData,
+    String? creatorName,
   }) {
     return AssignmentModel(
       id: id ?? this.id,
@@ -104,21 +109,27 @@ class AssignmentModel {
       authorName: authorName ?? this.authorName,
       createdAt: createdAt ?? this.createdAt,
       dueDate: dueDate ?? this.dueDate,
-      totalPoints: totalPoints ?? this.totalPoints,
+      points: points ?? this.points,
       isAutoGraded: isAutoGraded ?? this.isAutoGraded,
-      resourceUrls: resourceUrls ?? this.resourceUrls,
+      fileUrls: fileUrls ?? this.fileUrls,
       aiData: aiData ?? this.aiData,
+      creatorName: creatorName ?? this.creatorName,
     );
   }
 
   // Determine if the assignment is overdue
-  bool get isOverdue => DateTime.now().isAfter(dueDate);
+  bool get isOverdue {
+    if (dueDate == null) return false;
+    return DateTime.now().isAfter(dueDate!);
+  }
 
   // Format due date for display
   String get formattedDueDate {
+    if (dueDate == null) return 'No due date';
+    
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final dueDay = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final dueDay = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
     
     final difference = dueDay.difference(today).inDays;
     

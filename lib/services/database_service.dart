@@ -182,6 +182,102 @@ class DatabaseService {
     }
   }
 
+  // Delete a class (teacher only)
+  Future<void> deleteClass(String classId) async {
+    try {
+      // Verify the user is the class owner
+      final classDoc = await _classesCollection.doc(classId).get();
+      if (!classDoc.exists) {
+        throw Exception('Class not found');
+      }
+      
+      final classModel = ClassModel.fromFirestore(classDoc);
+      if (classModel.ownerId != _currentUserId) {
+        throw Exception('Only the class owner can delete this class');
+      }
+      
+      // Start a batch operation to delete related documents
+      final batch = _firestore.batch();
+      
+      // Delete announcements
+      final announcementsSnapshot = await _announcementsCollection
+          .where('classId', isEqualTo: classId)
+          .get();
+      for (var doc in announcementsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Delete assignments
+      final assignmentsSnapshot = await _assignmentsCollection
+          .where('classId', isEqualTo: classId)
+          .get();
+      
+      final assignmentIds = assignmentsSnapshot.docs.map((doc) => doc.id).toList();
+      
+      for (var doc in assignmentsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Delete submissions for the assignments
+      for (var assignmentId in assignmentIds) {
+        final submissionsSnapshot = await _submissionsCollection
+            .where('assignmentId', isEqualTo: assignmentId)
+            .get();
+        
+        for (var doc in submissionsSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+      }
+      
+      // Delete resources
+      final resourcesSnapshot = await _resourcesCollection
+          .where('classId', isEqualTo: classId)
+          .get();
+      for (var doc in resourcesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Finally, delete the class itself
+      batch.delete(_classesCollection.doc(classId));
+      
+      // Commit all deletions in a batch
+      await batch.commit();
+    } catch (e) {
+      print('Error deleting class: $e');
+      rethrow;
+    }
+  }
+  
+  // Leave a class (student only)
+  Future<void> leaveClass(String classId) async {
+    try {
+      // Get the class
+      final classDoc = await _classesCollection.doc(classId).get();
+      if (!classDoc.exists) {
+        throw Exception('Class not found');
+      }
+      
+      final classModel = ClassModel.fromFirestore(classDoc);
+      
+      // Verify the user is not the owner (owners can't leave their own class)
+      if (classModel.ownerId == _currentUserId) {
+        throw Exception('Class owners cannot leave their own class. Delete the class instead.');
+      }
+      
+      // Check if user is actually in the class
+      if (!classModel.hasStudent(_currentUserId)) {
+        throw Exception('You are not a member of this class');
+      }
+      
+      // Update the class by removing the user from studentIds
+      final updatedStudentIds = classModel.studentIds.where((id) => id != _currentUserId).toList();
+      await _classesCollection.doc(classId).update({'studentIds': updatedStudentIds});
+    } catch (e) {
+      print('Error leaving class: $e');
+      rethrow;
+    }
+  }
+
   // ========== ANNOUNCEMENTS METHODS ==========
 
   // Create a new announcement for a class
@@ -507,7 +603,8 @@ class DatabaseService {
     required String assignmentId,
     required String classId,
     required List<String> fileUrls,
-    String notes = '',
+    String content = '',
+    String? notes,
   }) async {
     try {
       // Get the assignment to check if it exists and is still open for submission
@@ -517,10 +614,6 @@ class DatabaseService {
       }
       
       final assignmentModel = AssignmentModel.fromFirestore(assignmentDoc);
-      
-      // Check if the assignment is past due date
-      final bool isLate = DateTime.now().isAfter(assignmentModel.dueDate);
-      final SubmissionStatus status = isLate ? SubmissionStatus.late : SubmissionStatus.submitted;
       
       // Check if the student is in this class
       final classDoc = await _classesCollection.doc(classId).get();
@@ -533,16 +626,9 @@ class DatabaseService {
         throw Exception('You are not enrolled in this class');
       }
       
-      // Mark any previous submissions as not latest
-      final previousSubmissions = await _submissionsCollection
-          .where('assignmentId', isEqualTo: assignmentId)
-          .where('studentId', isEqualTo: _currentUserId)
-          .where('isLatest', isEqualTo: true)
-          .get();
-      
-      for (var doc in previousSubmissions.docs) {
-        await doc.reference.update({'isLatest': false});
-      }
+      // Get user info for the submission
+      final user = _auth.currentUser;
+      String? photoUrl = user?.photoURL;
       
       // Create submission document data
       final submissionData = SubmissionModel(
@@ -551,11 +637,12 @@ class DatabaseService {
         classId: classId,
         studentId: _currentUserId,
         studentName: _currentUserName,
-        submittedAt: DateTime.now(),
+        studentPhotoUrl: photoUrl,
+        content: content,
         fileUrls: fileUrls,
+        submittedAt: DateTime.now(),
         notes: notes,
-        status: status,
-        isLatest: true,
+        isGraded: false,
       ).toFirestore();
       
       // Add the submission to Firestore
@@ -578,7 +665,10 @@ class DatabaseService {
           'suggestedImprovements': 'Try to connect your ideas more explicitly to the assignment prompt.'
         };
         
-        await docRef.update({'aiFeedback': aiFeedback});
+        await docRef.update({
+          'aiFeedback': aiFeedback,
+          'isAiFeedbackGenerated': true
+        });
       }
       
       // Get the updated submission
@@ -617,7 +707,7 @@ class DatabaseService {
       final querySnapshot = await _submissionsCollection
           .where('assignmentId', isEqualTo: assignmentId)
           .where('studentId', isEqualTo: studentId)
-          .where('isLatest', isEqualTo: true)
+          .orderBy('submittedAt', descending: true)
           .limit(1)
           .get();
       
@@ -651,10 +741,9 @@ class DatabaseService {
         throw Exception('Only the class owner can view all submissions');
       }
       
-      // Get all latest submissions for this assignment
+      // Get all submissions for this assignment
       final querySnapshot = await _submissionsCollection
           .where('assignmentId', isEqualTo: assignmentId)
-          .where('isLatest', isEqualTo: true)
           .orderBy('submittedAt', descending: true)
           .get();
       
@@ -670,7 +759,7 @@ class DatabaseService {
   // Grade a submission (teacher only)
   Future<SubmissionModel> gradeSubmission({
     required String submissionId,
-    required int score,
+    required double score,
     required String feedback,
   }) async {
     try {
@@ -692,7 +781,7 @@ class DatabaseService {
       
       // Update the submission with grade and feedback
       await _submissionsCollection.doc(submissionId).update({
-        'status': 'graded',
+        'isGraded': true,
         'score': score,
         'feedback': feedback,
       });
@@ -719,6 +808,96 @@ class DatabaseService {
       return querySnapshot.docs.isNotEmpty;
     } catch (e) {
       print('Error checking submission status: $e');
+      rethrow;
+    }
+  }
+  
+  // Search for classes based on a query string
+  Future<List<ClassModel>> searchClasses(String query) async {
+    try {
+      // Normalize the query string
+      final searchQuery = query.trim().toLowerCase();
+      
+      if (searchQuery.isEmpty) {
+        return [];
+      }
+      
+      // First, try exact name matches
+      final nameMatches = await _classesCollection
+          .where('name', isGreaterThanOrEqualTo: searchQuery)
+          .where('name', isLessThanOrEqualTo: searchQuery + '\uf8ff')
+          .get();
+      
+      // Then, try subject matches
+      final subjectMatches = await _classesCollection
+          .where('subject', isGreaterThanOrEqualTo: searchQuery)
+          .where('subject', isLessThanOrEqualTo: searchQuery + '\uf8ff')
+          .get();
+      
+      // Combine results and remove duplicates
+      final allDocs = [...nameMatches.docs, ...subjectMatches.docs];
+      final uniqueDocsMap = <String, DocumentSnapshot>{};
+      
+      for (var doc in allDocs) {
+        uniqueDocsMap[doc.id] = doc;
+      }
+      
+      // Convert to class models
+      final classes = uniqueDocsMap.values
+          .map((doc) => ClassModel.fromFirestore(doc))
+          .toList();
+      
+      // Filter to show only classes the user has access to (owned or joined)
+      return classes.where((classModel) => 
+        classModel.ownerId == _currentUserId || 
+        classModel.studentIds.contains(_currentUserId)
+      ).toList();
+    } catch (e) {
+      print('Error searching classes: $e');
+      rethrow;
+    }
+  }
+
+  // Get submissions for an assignment
+  Future<List<SubmissionModel>> getSubmissionsForAssignment(String classId, String assignmentId) async {
+    try {
+      // Check if the user is logged in
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Check if user is authorized to view this class's submissions
+      final classDoc = await _classesCollection.doc(classId).get();
+      if (!classDoc.exists) {
+        throw Exception('Class not found');
+      }
+
+      final classData = classDoc.data() as Map<String, dynamic>;
+      // Only the class owner or a student in the class can view submissions
+      final bool isTeacher = classData['ownerId'] == currentUser.uid;
+      final bool isStudent = (classData['studentIds'] as List<dynamic>).contains(currentUser.uid);
+
+      if (!isTeacher && !isStudent) {
+        throw Exception('You do not have permission to view submissions for this class');
+      }
+
+      // For students, they can only view their own submissions
+      final query = isTeacher
+          ? _submissionsCollection
+              .where('classId', isEqualTo: classId)
+              .where('assignmentId', isEqualTo: assignmentId)
+          : _submissionsCollection
+              .where('classId', isEqualTo: classId)
+              .where('assignmentId', isEqualTo: assignmentId)
+              .where('studentId', isEqualTo: currentUser.uid);
+
+      final querySnapshot = await query.get();
+      return querySnapshot.docs
+          .map((doc) => SubmissionModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error getting submissions: $e');
       rethrow;
     }
   }

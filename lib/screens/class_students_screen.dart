@@ -27,6 +27,53 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
   List<StudentModel> _students = [];
   String? _errorMessage;
 
+  // Get class-specific gradient colors based on class name
+  List<Color> get classGradientColors {
+    final String firstChar = widget.classModel.name.isNotEmpty ? widget.classModel.name[0].toUpperCase() : 'A';
+    final int colorSeed = firstChar.codeUnitAt(0) % 6; // Use 6 different color schemes
+    
+    if (widget.isTeacher) {
+      // Blue-based gradients for created classes
+      switch (colorSeed) {
+        case 0:
+          return [const Color(0xFF1A73E8), const Color(0xFF3C8CE7)]; // Google blue
+        case 1:
+          return [const Color(0xFF4285F4), const Color(0xFF5C9EFF)]; // Light blue
+        case 2:
+          return [const Color(0xFF2979FF), const Color(0xFF448AFF)]; // Material blue
+        case 3:
+          return [const Color(0xFF0277BD), const Color(0xFF039BE5)]; // Sky blue
+        case 4:
+          return [const Color(0xFF0288D1), const Color(0xFF29B6F6)]; // Light blue accent
+        case 5:
+          return [const Color(0xFF1565C0), const Color(0xFF42A5F5)]; // Blue to light blue
+        default:
+          return [const Color(0xFF1A73E8), const Color(0xFF3C8CE7)]; // Default blue
+      }
+    } else {
+      // Purple-based gradients for joined classes
+      switch (colorSeed) {
+        case 0:
+          return [const Color(0xFF8E24AA), const Color(0xFFAB47BC)]; // Light purple
+        case 1:
+          return [const Color(0xFF7B1FA2), const Color(0xFF9C27B0)]; // Medium purple
+        case 2:
+          return [const Color(0xFF6A1B9A), const Color(0xFF8E24AA)]; // Dark purple
+        case 3:
+          return [const Color(0xFF5E35B1), const Color(0xFF7986CB)]; // Indigo to purple
+        case 4:
+          return [const Color(0xFF9C27B0), const Color(0xFFCE93D8)]; // Purple to light purple
+        case 5:
+          return [const Color(0xFF7E57C2), const Color(0xFF9575CD)]; // Deep purple to light
+        default:
+          return [const Color(0xFF7B1FA2), const Color(0xFF9C27B0)]; // Default purple
+      }
+    }
+  }
+
+  // Get primary color for the class for other UI elements
+  Color get classPrimaryColor => classGradientColors.first;
+
   @override
   void initState() {
     super.initState();
@@ -58,8 +105,10 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Students - ${widget.classModel.name}'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: classPrimaryColor,
+        elevation: 1,
+        iconTheme: IconThemeData(color: classPrimaryColor),
         actions: [
           if (widget.isTeacher)
             IconButton(
@@ -70,7 +119,9 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(classPrimaryColor),
+            ))
           : _errorMessage != null
               ? _buildErrorView()
               : _students.isEmpty
@@ -114,9 +165,12 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
             ElevatedButton(
               onPressed: _loadStudents,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: classPrimaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Try Again'),
             ),
@@ -135,7 +189,7 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
           children: [
             Icon(
               Icons.people_outline,
-              color: AppTheme.secondaryColor,
+              color: classPrimaryColor,
               size: 80,
             ),
             const SizedBox(height: 16),
@@ -163,16 +217,19 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: classGradientColors,
+                ),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
                     Icons.key,
-                    color: AppTheme.primaryColor,
+                    color: Colors.white,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -181,12 +238,12 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.copy, size: 18, color: AppTheme.primaryColor),
+                    icon: const Icon(Icons.copy, size: 18, color: Colors.white),
                     onPressed: () {
                       // Logic to copy class code
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -212,49 +269,57 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${_students.length} Student${_students.length == 1 ? '' : 's'}',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: classGradientColors,
               ),
-              if (widget.isTeacher)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.key,
-                        color: AppTheme.primaryColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        widget.classModel.code,
-                        style: const TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_students.length} Student${_students.length == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-            ],
+                if (widget.isTeacher)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.key,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.classModel.code,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          const Divider(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView.builder(
               itemCount: _students.length,
@@ -267,7 +332,7 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: isCurrentUser
-                        ? BorderSide(color: AppTheme.primaryColor, width: 1)
+                        ? BorderSide(color: classPrimaryColor, width: 1)
                         : BorderSide.none,
                   ),
                   child: ListTile(
@@ -277,8 +342,8 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
                     ),
                     leading: CircleAvatar(
                       backgroundColor: isCurrentUser
-                          ? AppTheme.primaryColor
-                          : AppTheme.secondaryColor.withOpacity(0.7),
+                          ? classPrimaryColor
+                          : classGradientColors[0].withOpacity(0.7),
                       child: student.photoUrl != null
                           ? null
                           : Text(
@@ -307,7 +372,7 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
                     ),
                     trailing: widget.isTeacher
                         ? IconButton(
-                            icon: const Icon(Icons.more_vert),
+                            icon: Icon(Icons.more_vert, color: classPrimaryColor),
                             onPressed: () {
                               _showStudentOptions(student);
                             },
@@ -319,13 +384,17 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: classGradientColors,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text(
                                   'You',
                                   style: TextStyle(
-                                    color: AppTheme.primaryColor,
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -356,8 +425,40 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: classPrimaryColor,
+              backgroundImage: student.photoUrl != null ? NetworkImage(student.photoUrl!) : null,
+              child: student.photoUrl == null
+                  ? Text(
+                      student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              student.name,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              student.email,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
             ListTile(
-              leading: const Icon(Icons.person),
+              leading: Icon(Icons.person, color: classPrimaryColor),
               title: const Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
@@ -365,7 +466,7 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.assignment),
+              leading: Icon(Icons.assignment, color: classPrimaryColor),
               title: const Text('View Assignments'),
               onTap: () {
                 Navigator.pop(context);
@@ -376,7 +477,7 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.assessment),
+              leading: Icon(Icons.assessment, color: classPrimaryColor),
               title: const Text('View Progress'),
               onTap: () {
                 Navigator.pop(context);
@@ -412,9 +513,12 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey,
+            ),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
               try {
@@ -438,7 +542,10 @@ class _ClassStudentsScreenState extends State<ClassStudentsScreen> {
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Remove'),
           ),
         ],

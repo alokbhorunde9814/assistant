@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../utils/theme.dart';
 
 enum ButtonType {
   primary,
   secondary,
   outline,
   text,
+  gradient,
 }
 
 class CustomButton extends StatelessWidget {
@@ -18,6 +20,7 @@ class CustomButton extends StatelessWidget {
   final double height;
   final EdgeInsetsGeometry padding;
   final BorderRadius borderRadius;
+  final Gradient? gradient;
 
   const CustomButton({
     super.key,
@@ -31,13 +34,25 @@ class CustomButton extends StatelessWidget {
     this.height = 48,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     this.borderRadius = const BorderRadius.all(Radius.circular(8)),
+    this.gradient,
   });
 
   @override
   Widget build(BuildContext context) {
     // Define theme colors
-    const primaryColor = Color(0xFF6A11CB);
-    const secondaryColor = Color(0xFFE85CD3);
+    final primaryColor = AppTheme.primaryColor;
+    final secondaryColor = AppTheme.primaryGreen;
+    
+    // Get the gradient from AppTheme or use the provided one
+    final defaultGradient = AppTheme.gradientDecoration.gradient;
+    
+    // For gradient button
+    if (type == ButtonType.gradient || gradient != null) {
+      // Make sure we have a non-null gradient to use
+      if (gradient != null || defaultGradient != null) {
+        return _buildGradientButton(gradient ?? defaultGradient!);
+      }
+    }
     
     // Determine button style based on type
     ButtonStyle buttonStyle;
@@ -62,7 +77,7 @@ class CustomButton extends StatelessWidget {
       case ButtonType.outline:
         buttonStyle = OutlinedButton.styleFrom(
           foregroundColor: primaryColor,
-          side: const BorderSide(color: primaryColor),
+          side: BorderSide(color: primaryColor),
           padding: padding,
           shape: RoundedRectangleBorder(borderRadius: borderRadius),
         );
@@ -74,31 +89,17 @@ class CustomButton extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: borderRadius),
         );
         break;
+      case ButtonType.gradient:
+        // This case is handled separately
+        buttonStyle = ElevatedButton.styleFrom(
+          padding: padding,
+          shape: RoundedRectangleBorder(borderRadius: borderRadius),
+        );
+        break;
     }
 
     // Create button content with icon if provided
-    Widget buttonContent;
-    if (isLoading) {
-      buttonContent = const SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-        ),
-      );
-    } else if (icon != null) {
-      buttonContent = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 8),
-          Text(label),
-        ],
-      );
-    } else {
-      buttonContent = Text(label);
-    }
+    Widget buttonContent = _buildButtonContent();
 
     // Create the appropriate button based on type
     Widget button;
@@ -125,9 +126,79 @@ class CustomButton extends StatelessWidget {
           child: buttonContent,
         );
         break;
+      case ButtonType.gradient:
+        // This case is handled separately
+        button = ElevatedButton(
+          style: buttonStyle,
+          onPressed: isLoading ? null : onPressed,
+          child: buttonContent,
+        );
+        break;
     }
 
     // Apply width constraints if needed
+    return _applyWidthConstraints(button);
+  }
+
+  Widget _buildGradientButton(Gradient gradient) {
+    return InkWell(
+      onTap: isLoading ? null : onPressed,
+      borderRadius: borderRadius,
+      child: Container(
+        height: height,
+        width: fullWidth ? double.infinity : width,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Padding(
+            padding: padding,
+            child: _buildButtonContent(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButtonContent() {
+    if (isLoading) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      );
+    } else if (icon != null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      );
+    } else {
+      return Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      );
+    }
+  }
+
+  Widget _applyWidthConstraints(Widget button) {
     if (fullWidth) {
       return SizedBox(
         width: double.infinity,
@@ -165,7 +236,8 @@ class CustomIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF6A11CB);
+    final primaryColor = AppTheme.primaryColor;
+    final secondaryColor = AppTheme.primaryGreen;
     
     Color iconColor;
     switch (type) {
@@ -173,10 +245,11 @@ class CustomIconButton extends StatelessWidget {
         iconColor = primaryColor;
         break;
       case ButtonType.secondary:
-        iconColor = const Color(0xFFE85CD3);
+        iconColor = secondaryColor;
         break;
       case ButtonType.outline:
       case ButtonType.text:
+      case ButtonType.gradient:
         iconColor = primaryColor;
         break;
     }

@@ -2,181 +2,180 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 enum SubmissionStatus {
-  pending,
+  notSubmitted,
   submitted,
   graded,
-  late,
-  resubmitted
+  returned
 }
 
 class SubmissionModel {
   final String id;
-  final String assignmentId;
   final String classId;
+  final String assignmentId;
   final String studentId;
   final String studentName;
-  final DateTime submittedAt;
+  final String? studentPhotoUrl;
+  final String content;
   final List<String> fileUrls;
-  final String notes;
-  final SubmissionStatus status;
-  final int? score;
+  final DateTime? submittedAt;
+  final bool isGraded;
+  final double? score;
   final String? feedback;
+  final bool isAiFeedbackGenerated;
+  final bool isAiFeedbackReviewed;
+  final Map<String, dynamic>? aiData;
+  final String? notes;
   final Map<String, dynamic>? aiFeedback;
-  final bool isLatest;
 
   SubmissionModel({
     required this.id,
-    required this.assignmentId,
     required this.classId,
+    required this.assignmentId,
     required this.studentId,
     required this.studentName,
-    required this.submittedAt,
-    required this.fileUrls,
-    this.notes = '',
-    this.status = SubmissionStatus.submitted,
+    this.studentPhotoUrl,
+    this.content = '',
+    this.fileUrls = const [],
+    this.submittedAt,
+    this.isGraded = false,
     this.score,
     this.feedback,
+    this.isAiFeedbackGenerated = false,
+    this.isAiFeedbackReviewed = false,
+    this.aiData,
+    this.notes,
     this.aiFeedback,
-    this.isLatest = true,
   });
   
-  // Create an empty submission
+  // Create an empty submission with default values
   factory SubmissionModel.empty() {
     return SubmissionModel(
       id: '',
-      assignmentId: '',
       classId: '',
+      assignmentId: '',
       studentId: '',
       studentName: '',
-      submittedAt: DateTime.now(),
-      fileUrls: [],
+      content: '',
     );
   }
   
-  // Create from Firestore document
+  // Create a submission from a Firestore document
   factory SubmissionModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
-    // Convert string status to enum
-    final String statusStr = data['status'] ?? 'submitted';
-    final SubmissionStatus submissionStatus;
-    switch (statusStr) {
-      case 'pending':
-        submissionStatus = SubmissionStatus.pending;
-        break;
-      case 'submitted':
-        submissionStatus = SubmissionStatus.submitted;
-        break;
-      case 'graded':
-        submissionStatus = SubmissionStatus.graded;
-        break;
-      case 'late':
-        submissionStatus = SubmissionStatus.late;
-        break;
-      case 'resubmitted':
-        submissionStatus = SubmissionStatus.resubmitted;
-        break;
-      default:
-        submissionStatus = SubmissionStatus.submitted;
-    }
-    
     return SubmissionModel(
       id: doc.id,
-      assignmentId: data['assignmentId'] ?? '',
       classId: data['classId'] ?? '',
+      assignmentId: data['assignmentId'] ?? '',
       studentId: data['studentId'] ?? '',
       studentName: data['studentName'] ?? '',
-      submittedAt: (data['submittedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      studentPhotoUrl: data['studentPhotoUrl'],
+      content: data['content'] ?? '',
       fileUrls: List<String>.from(data['fileUrls'] ?? []),
-      notes: data['notes'] ?? '',
-      status: submissionStatus,
-      score: data['score'],
+      submittedAt: (data['submittedAt'] as Timestamp?)?.toDate(),
+      isGraded: data['isGraded'] ?? false,
+      score: data['score']?.toDouble(),
       feedback: data['feedback'],
-      aiFeedback: data['aiFeedback'],
-      isLatest: data['isLatest'] ?? true,
+      isAiFeedbackGenerated: data['isAiFeedbackGenerated'] ?? false,
+      isAiFeedbackReviewed: data['isAiFeedbackReviewed'] ?? false,
+      aiData: data['aiData'] as Map<String, dynamic>?,
+      notes: data['notes'],
+      aiFeedback: data['aiFeedback'] as Map<String, dynamic>?,
     );
   }
   
-  // Convert to a map for Firestore
+  // Convert submission to a map for Firestore
   Map<String, dynamic> toFirestore() {
-    // Convert status enum to string
-    String statusStr;
-    switch (status) {
-      case SubmissionStatus.pending:
-        statusStr = 'pending';
-        break;
-      case SubmissionStatus.submitted:
-        statusStr = 'submitted';
-        break;
-      case SubmissionStatus.graded:
-        statusStr = 'graded';
-        break;
-      case SubmissionStatus.late:
-        statusStr = 'late';
-        break;
-      case SubmissionStatus.resubmitted:
-        statusStr = 'resubmitted';
-        break;
-    }
-    
     return {
-      'assignmentId': assignmentId,
       'classId': classId,
+      'assignmentId': assignmentId,
       'studentId': studentId,
       'studentName': studentName,
-      'submittedAt': Timestamp.fromDate(submittedAt),
+      'studentPhotoUrl': studentPhotoUrl,
+      'content': content,
       'fileUrls': fileUrls,
-      'notes': notes,
-      'status': statusStr,
+      'submittedAt': submittedAt != null ? Timestamp.fromDate(submittedAt!) : null,
+      'isGraded': isGraded,
       'score': score,
       'feedback': feedback,
+      'isAiFeedbackGenerated': isAiFeedbackGenerated,
+      'isAiFeedbackReviewed': isAiFeedbackReviewed,
+      'aiData': aiData,
+      'notes': notes,
       'aiFeedback': aiFeedback,
-      'isLatest': isLatest,
     };
   }
   
-  // Create a copy with updated fields
+  // Create a copy of the submission with updated fields
   SubmissionModel copyWith({
     String? id,
-    String? assignmentId,
     String? classId,
+    String? assignmentId,
     String? studentId,
     String? studentName,
-    DateTime? submittedAt,
+    String? studentPhotoUrl,
+    String? content,
     List<String>? fileUrls,
-    String? notes,
-    SubmissionStatus? status,
-    int? score,
+    DateTime? submittedAt,
+    bool? isGraded,
+    double? score,
     String? feedback,
+    bool? isAiFeedbackGenerated,
+    bool? isAiFeedbackReviewed,
+    Map<String, dynamic>? aiData,
+    String? notes,
     Map<String, dynamic>? aiFeedback,
-    bool? isLatest,
   }) {
     return SubmissionModel(
       id: id ?? this.id,
-      assignmentId: assignmentId ?? this.assignmentId,
       classId: classId ?? this.classId,
+      assignmentId: assignmentId ?? this.assignmentId,
       studentId: studentId ?? this.studentId,
       studentName: studentName ?? this.studentName,
-      submittedAt: submittedAt ?? this.submittedAt,
+      studentPhotoUrl: studentPhotoUrl ?? this.studentPhotoUrl,
+      content: content ?? this.content,
       fileUrls: fileUrls ?? this.fileUrls,
-      notes: notes ?? this.notes,
-      status: status ?? this.status,
+      submittedAt: submittedAt ?? this.submittedAt,
+      isGraded: isGraded ?? this.isGraded,
       score: score ?? this.score,
       feedback: feedback ?? this.feedback,
+      isAiFeedbackGenerated: isAiFeedbackGenerated ?? this.isAiFeedbackGenerated,
+      isAiFeedbackReviewed: isAiFeedbackReviewed ?? this.isAiFeedbackReviewed,
+      aiData: aiData ?? this.aiData,
+      notes: notes ?? this.notes,
       aiFeedback: aiFeedback ?? this.aiFeedback,
-      isLatest: isLatest ?? this.isLatest,
     );
+  }
+  
+  // Get submission status based on properties
+  SubmissionStatus get status {
+    if (submittedAt == null) {
+      return SubmissionStatus.notSubmitted;
+    } else if (isGraded) {
+      return SubmissionStatus.graded;
+    } else {
+      return SubmissionStatus.submitted;
+    }
+  }
+  
+  // Format score for display
+  String get formattedScore {
+    if (score == null) {
+      return 'Not graded';
+    }
+    return score!.toStringAsFixed(1);
   }
   
   // Get formatted submission date
   String get formattedSubmissionDate {
-    return DateFormat('MMM d, yyyy \'at\' h:mm a').format(submittedAt);
+    if (submittedAt == null) return 'Not submitted';
+    return DateFormat('MMM d, yyyy \'at\' h:mm a').format(submittedAt!);
   }
   
   // Check if submission is late based on assignment due date
   bool isLate(DateTime dueDate) {
     // Add a 1-minute buffer to handle slight delays in submission processing
     final DateTime bufferedDueDate = dueDate.add(const Duration(minutes: 1));
-    return submittedAt.isAfter(bufferedDueDate);
+    if (submittedAt == null) return false;
+    return submittedAt!.isAfter(bufferedDueDate);
   }
 } 
