@@ -496,9 +496,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               height: 140, // Fixed height for consistent cards
               decoration: BoxDecoration(
-                color: Colors.white,
-              ),
-            ),
+            color: Colors.white,
+          ),
+        ),
             
             // Top decorative element with gradient
             Positioned(
@@ -550,9 +550,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+          children: [
                   // Top section with title and options
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,21 +588,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       
                       // Subject or info line
-                      Text(
+            Text(
                         classData.subject,
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.white70,
                         ),
                         overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+            ),
+          ],
+        ),
                   
                   // Bottom section with additional info
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          children: [
                       // Class code and student count row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -624,29 +624,29 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           
                           // Student count
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
                               color: cardColor.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                borderRadius: BorderRadius.circular(12),
+              ),
                             child: Row(
                               children: [
                                 Icon(Icons.people, size: 14, color: cardColor),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${classData.studentCount}',
-                                  style: TextStyle(
-                                    fontSize: 12,
+                style: TextStyle(
+                  fontSize: 12,
                                     color: cardColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                  fontWeight: FontWeight.bold,
+                ),
                                 ),
                               ],
-                            ),
-                          ),
-                        ],
-                      ),
+              ),
+            ),
+          ],
+        ),
                       
                       // Teacher/Creator name row
                       const SizedBox(height: 4),
@@ -708,18 +708,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ListTile(
                 leading: const Icon(Icons.dashboard_outlined, color: Color(0xFF4285F4)),
                 title: const Text('View Dashboard'),
-                onTap: () {
+        onTap: () {
                   Navigator.pop(context); // Close bottom sheet
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ClassDashboardScreen(
-                        classModel: classData,
-                        isTeacher: isOwner,
-                      ),
-                    ),
-                  );
-                },
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ClassDashboardScreen(
+                classModel: classData,
+                isTeacher: isOwner,
+              ),
+            ),
+          );
+        },
               ),
               
               if (isOwner) ...[

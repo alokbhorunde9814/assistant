@@ -117,7 +117,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     
     try {
       // Upload the files to Firebase Storage
-      final fileUrls = await _fileService.uploadFiles(
+      final uploadResult = await _fileService.uploadFiles(
         _selectedFiles,
         widget.assignment.id,
         widget.assignment.classId,
@@ -131,7 +131,9 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
       final submission = await _databaseService.submitAssignment(
         assignmentId: widget.assignment.id,
         classId: widget.assignment.classId,
-        fileUrls: fileUrls,
+        fileUrls: uploadResult['urls']!,
+        fileNames: uploadResult['names']!,
+        filePaths: uploadResult['paths']!,
         content: _notesController.text,
         points: widget.assignment.points.toDouble(),
       );
@@ -221,22 +223,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   }
   
   String _formatDueDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dueDate = DateTime(date.year, date.month, date.day);
-    
-    final formatter = DateFormat('MMM dd, yyyy \'at\' h:mm a');
-    String formattedDate = formatter.format(date);
-    
-    if (dueDate == today) {
-      return 'Today at ${DateFormat('h:mm a').format(date)}';
-    } else if (dueDate.difference(today).inDays == 1) {
-      return 'Tomorrow at ${DateFormat('h:mm a').format(date)}';
-    } else if (today.difference(dueDate).inDays == 1) {
-      return 'Yesterday at ${DateFormat('h:mm a').format(date)}';
-    }
-    
-    return formattedDate;
+    return DateFormat('MMM d, yyyy \'at\' h:mm a').format(date);
   }
   
   @override
@@ -729,8 +716,8 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   }
   
   Widget _buildAiFeedbackCard() {
-    final aiFeedback = _latestSubmission!.aiFeedback!;
-    final feedbackPoints = aiFeedback['feedbackPoints'] as List;
+    final aiFeedback = _latestSubmission?.aiFeedback;
+    if (aiFeedback == null) return const SizedBox.shrink();
     
     return Card(
       elevation: 2,
@@ -747,7 +734,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                 const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
                 const SizedBox(width: 8),
                 const Text(
-                  'AI Feedback on Your Submission',
+                  'AI Feedback',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -756,86 +743,62 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
               ],
             ),
             const Divider(height: 24),
-            Row(
-              children: [
-                Icon(
-                  Icons.star,
-                  color: Colors.amber.shade600,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Suggested Score: ${aiFeedback['score']}/${widget.assignment.points}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Feedback Points:',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...feedbackPoints.map((point) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.circle,
-                      size: 10,
-                      color: AppTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(point.toString())),
-                  ],
-                ),
-              );
-            }).toList(),
-            const SizedBox(height: 16),
-            const Text(
-              'Suggested Improvements:',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(aiFeedback['suggestedImprovements'].toString()),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
+            if (aiFeedback['score'] != null) ...[
+              Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This feedback is generated by AI and may not fully reflect your instructor\'s assessment.',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                      ),
-                    ),
+                  const Icon(Icons.score, size: 18, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Score: ${aiFeedback['score']}%',
+                    style: const TextStyle(fontSize: 15),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 16),
+            ],
+            if (aiFeedback['feedbackPoints'] != null) ...[
+              const Text(
+                'Feedback Points:',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...(aiFeedback['feedbackPoints'] as List).map((point) {
+                return Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          point.toString(),
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+            if (aiFeedback['suggestedImprovements'] != null) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Suggested Improvements:',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                aiFeedback['suggestedImprovements'].toString(),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
           ],
         ),
       ),
@@ -853,77 +816,66 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _showPreviousSubmissions = !_showPreviousSubmissions;
-                });
-              },
-              child: Row(
-                children: [
-                  const Icon(Icons.history, color: AppTheme.primaryColor),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Previous Submissions',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+            Row(
+              children: [
+                const Icon(Icons.history, color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'Previous Submissions',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  Icon(
-                    _showPreviousSubmissions
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: Colors.grey,
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(
+                    _showPreviousSubmissions ? Icons.expand_less : Icons.expand_more,
                   ),
-                ],
-              ),
+                  onPressed: () {
+                    setState(() {
+                      _showPreviousSubmissions = !_showPreviousSubmissions;
+                    });
+                  },
+                ),
+              ],
             ),
             if (_showPreviousSubmissions) ...[
               const Divider(height: 24),
-              ...List.generate(_previousSubmissions.length, (index) {
-                final submission = _previousSubmissions[index];
-                if (submission.id == _latestSubmission?.id) {
-                  return const SizedBox.shrink(); // Skip the current submission
-                }
-                
+              ..._previousSubmissions.skip(1).map((submission) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          _getSubmissionStatusIcon(submission.status),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Submitted on ${submission.formattedSubmissionDate}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 24),
+                      _getSubmissionStatusIcon(submission.status),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Files: ${submission.fileUrls.length} file(s)',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                            if (submission.status == SubmissionStatus.graded) 
-                              Text(
-                                'Grade: ${submission.score}/${widget.assignment.points}',
-                                style: const TextStyle(fontSize: 13),
+                              submission.formattedSubmissionDate,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Files: ${submission.fileUrls.length} file(s)',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  if (submission.status == SubmissionStatus.graded) 
+                                    Text(
+                                      'Grade: ${submission.score}/${widget.assignment.points}',
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),

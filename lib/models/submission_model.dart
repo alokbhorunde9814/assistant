@@ -16,7 +16,9 @@ class SubmissionModel {
   final String studentName;
   final String? studentPhotoUrl;
   final String content;
-  final List<String> fileUrls;
+  final List<String> fileUrls; // This will store Firebase Storage URLs
+  final List<String> fileNames; // Store original file names
+  final List<String> filePaths; // Store Firebase Storage paths
   final DateTime? submittedAt;
   final bool isGraded;
   final double? score;
@@ -36,6 +38,8 @@ class SubmissionModel {
     this.studentPhotoUrl,
     this.content = '',
     this.fileUrls = const [],
+    this.fileNames = const [],
+    this.filePaths = const [],
     this.submittedAt,
     this.isGraded = false,
     this.score,
@@ -71,6 +75,8 @@ class SubmissionModel {
       studentPhotoUrl: data['studentPhotoUrl'],
       content: data['content'] ?? '',
       fileUrls: List<String>.from(data['fileUrls'] ?? []),
+      fileNames: List<String>.from(data['fileNames'] ?? []),
+      filePaths: List<String>.from(data['filePaths'] ?? []),
       submittedAt: (data['submittedAt'] as Timestamp?)?.toDate(),
       isGraded: data['isGraded'] ?? false,
       score: data['score']?.toDouble(),
@@ -93,6 +99,8 @@ class SubmissionModel {
       'studentPhotoUrl': studentPhotoUrl,
       'content': content,
       'fileUrls': fileUrls,
+      'fileNames': fileNames,
+      'filePaths': filePaths,
       'submittedAt': submittedAt != null ? Timestamp.fromDate(submittedAt!) : null,
       'isGraded': isGraded,
       'score': score,
@@ -115,6 +123,8 @@ class SubmissionModel {
     String? studentPhotoUrl,
     String? content,
     List<String>? fileUrls,
+    List<String>? fileNames,
+    List<String>? filePaths,
     DateTime? submittedAt,
     bool? isGraded,
     double? score,
@@ -134,6 +144,8 @@ class SubmissionModel {
       studentPhotoUrl: studentPhotoUrl ?? this.studentPhotoUrl,
       content: content ?? this.content,
       fileUrls: fileUrls ?? this.fileUrls,
+      fileNames: fileNames ?? this.fileNames,
+      filePaths: filePaths ?? this.filePaths,
       submittedAt: submittedAt ?? this.submittedAt,
       isGraded: isGraded ?? this.isGraded,
       score: score ?? this.score,
@@ -146,15 +158,18 @@ class SubmissionModel {
     );
   }
   
-  // Get submission status based on properties
+  // Get formatted submission date
+  String get formattedSubmissionDate {
+    if (submittedAt == null) return 'Not submitted';
+    return '${submittedAt!.day}/${submittedAt!.month}/${submittedAt!.year}';
+  }
+  
+  // Get submission status
   SubmissionStatus get status {
-    if (submittedAt == null) {
-      return SubmissionStatus.notSubmitted;
-    } else if (isGraded) {
-      return SubmissionStatus.graded;
-    } else {
-      return SubmissionStatus.submitted;
-    }
+    if (submittedAt == null) return SubmissionStatus.notSubmitted;
+    if (isGraded) return SubmissionStatus.graded;
+    if (feedback != null) return SubmissionStatus.returned;
+    return SubmissionStatus.submitted;
   }
   
   // Format score for display
@@ -163,12 +178,6 @@ class SubmissionModel {
       return 'Not graded';
     }
     return score!.toStringAsFixed(1);
-  }
-  
-  // Get formatted submission date
-  String get formattedSubmissionDate {
-    if (submittedAt == null) return 'Not submitted';
-    return DateFormat('MMM d, yyyy \'at\' h:mm a').format(submittedAt!);
   }
   
   // Check if submission is late based on assignment due date

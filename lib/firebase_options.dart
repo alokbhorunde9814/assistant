@@ -51,39 +51,4 @@ class DefaultFirebaseOptions {
     measurementId: 'G-MEASUREMENT_ID',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAwZWpqLQLizT9b6hKcuucAiylXgq9actQ',
-    appId: '1:702431682405:android:b80f68ec981fe60bd1cb8c',
-    messagingSenderId: '702431682405',
-    projectId: 'myapp-6ed81',
-    storageBucket: 'myapp-6ed81.firebasestorage.app',
-  );
-
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA3Itz5d54wdjP03VLCrnE9DF5-5Tm2rRk',
-    appId: '1:702431682405:ios:df3ce1f72f9fc99bd1cb8c',
-    messagingSenderId: '702431682405',
-    projectId: 'myapp-6ed81',
-    storageBucket: 'myapp-6ed81.firebasestorage.app',
-    iosClientId: '702431682405-g9ou4mhiil4gj2fte8g3jlr2voelkd2e.apps.googleusercontent.com',
-    iosBundleId: 'com.example.firebaseLogin',
-  );
-
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyA3Itz5d54wdjP03VLCrnE9DF5-5Tm2rRk',
-    appId: '1:702431682405:macos:1234567890abcdef',
-    messagingSenderId: '702431682405',
-    projectId: 'myapp-6ed81',
-    storageBucket: 'myapp-6ed81.firebasestorage.app',
-    iosClientId: '702431682405-iosmacos.apps.googleusercontent.com',
-    iosBundleId: 'com.example.firebaseLogin.macos',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAwZWpqLQLizT9b6hKcuucAiylXgq9actQ',
-    appId: '1:702431682405:windows:1234567890abcdef',
-    messagingSenderId: '702431682405',
-    projectId: 'myapp-6ed81',
-    storageBucket: 'myapp-6ed81.firebasestorage.app',
-  );
 } 

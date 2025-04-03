@@ -603,79 +603,58 @@ class DatabaseService {
     required String assignmentId,
     required String classId,
     required List<String> fileUrls,
+    required List<String> fileNames,
+    required List<String> filePaths,
     String content = '',
-    String? notes,
-    required double points,
+    double points = 0,
   }) async {
     try {
-      // Get the assignment to check if it exists and is still open for submission
+      // Get assignment details
       final assignmentDoc = await _assignmentsCollection.doc(assignmentId).get();
       if (!assignmentDoc.exists) {
         throw Exception('Assignment not found');
       }
       
-      final assignmentModel = AssignmentModel.fromFirestore(assignmentDoc);
+      final assignment = AssignmentModel.fromFirestore(assignmentDoc);
       
-      // Check if the student is in this class
+      // Check if user is in the class
       final classDoc = await _classesCollection.doc(classId).get();
       if (!classDoc.exists) {
         throw Exception('Class not found');
       }
       
       final classModel = ClassModel.fromFirestore(classDoc);
-      if (!classModel.hasStudent(_currentUserId) && classModel.ownerId != _currentUserId) {
-        throw Exception('You are not enrolled in this class');
+      if (!classModel.hasStudent(_currentUserId)) {
+        throw Exception('You are not a member of this class');
       }
       
-      // Get user info for the submission
-      final user = _auth.currentUser;
-      String? photoUrl = user?.photoURL;
+      // Create submission data
+      final submissionData = {
+        'classId': classId,
+        'assignmentId': assignmentId,
+        'studentId': _currentUserId,
+        'studentName': _currentUserName,
+        'studentPhotoUrl': _auth.currentUser?.photoURL,
+        'content': content,
+        'fileUrls': fileUrls,
+        'fileNames': fileNames,
+        'filePaths': filePaths,
+        'submittedAt': Timestamp.now(),
+        'isGraded': false,
+        'points': points,
+        'isAiFeedbackGenerated': false,
+        'isAiFeedbackReviewed': false,
+      };
       
-      // Create submission document data
-      final submissionData = SubmissionModel(
-        id: '', // Will be set after document creation
-        assignmentId: assignmentId,
-        classId: classId,
-        studentId: _currentUserId,
-        studentName: _currentUserName,
-        studentPhotoUrl: photoUrl,
-        content: content,
-        fileUrls: fileUrls,
-        submittedAt: DateTime.now(),
-        notes: notes,
-        isGraded: false,
-        score: points,
-      ).toFirestore();
-      
-      // Add the submission to Firestore
+      // Add submission to Firestore
       final docRef = await _submissionsCollection.add(submissionData);
       
-      // Update the submission with its document ID
+      // Update submission with its ID
       await docRef.update({'id': docRef.id});
       
-      // Generate AI feedback if enabled
-      if (assignmentModel.isAutoGraded) {
-        // In a real app, you would call an AI service here
-        // For now, we'll simulate AI feedback with mock data
-        final Map<String, dynamic> aiFeedback = {
-          'score': 85,
-          'feedbackPoints': [
-            'Good work on explaining the core concepts',
-            'Consider adding more examples to illustrate your points',
-            'The conclusion could be strengthened with a summary of key takeaways',
-          ],
-          'suggestedImprovements': 'Try to connect your ideas more explicitly to the assignment prompt.'
-        };
-        
-        await docRef.update({
-          'aiFeedback': aiFeedback,
-          'isAiFeedbackGenerated': true
-        });
-      }
-      
-      // Get the updated submission
-      final docSnapshot = await docRef.get();
-      return SubmissionModel.fromFirestore(docSnapshot);
+      // Get the created submission
+      final submissionDoc = await docRef.get();
+      return SubmissionModel.fromFirestore(submissionDoc);
     } catch (e) {
       print('Error submitting assignment: $e');
       rethrow;
@@ -704,7 +683,10 @@ class DatabaseService {
   }
   
   // Get the latest submission for a student and assignment
-  Future<SubmissionModel?> getLatestSubmission(String assignmentId, String studentId) async {
+  Future<SubmissionModel?> getLatestSubmission(
+    String assignmentId,
+    String studentId,
+  ) async {
     try {
       final querySnapshot = await _submissionsCollection
           .where('assignmentId', isEqualTo: assignmentId)
@@ -803,7 +785,6 @@ class DatabaseService {
       final querySnapshot = await _submissionsCollection
           .where('assignmentId', isEqualTo: assignmentId)
           .where('studentId', isEqualTo: _currentUserId)
-          .where('isLatest', isEqualTo: true)
           .limit(1)
           .get();
       
