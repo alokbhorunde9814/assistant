@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <!--
+  <head>
+    <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
 
@@ -14,49 +14,254 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+    <base href="$FLUTTER_BASE_HREF" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="description" content="A new Flutter project." />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
 
-  <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="firebase_login">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    <!-- iOS meta tags & icons -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="firebase_login" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
 
-  <!-- Google Sign-In client ID -->
-  <meta name="google-signin-client_id" content="702431682405-6m7t60ieo7udrbcv69k83dk30uk34r5o.apps.googleusercontent.com">
+    <!-- Google Sign-In client ID -->
+    <meta
+      name="google-signin-client_id"
+      content="702431682405-6m7t60ieo7udrbcv69k83dk30uk34r5o.apps.googleusercontent.com"
+    />
 
-  <title>firebase_login</title>
-  <link rel="manifest" href="manifest.json">
+    <!-- Camera permissions -->
+    <meta name="permissions-policy" content="camera=self" />
 
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = null;
-  </script>
-  <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
-</head>
-<body>
-  <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
+    <title>firebase_login</title>
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+
+    <script>
+      // The value below is injected by flutter build, do not touch.
+      const serviceWorkerVersion = null;
+    </script>
+    <!-- This script adds the flutter initialization JS code -->
+    <script src="flutter.js" defer></script>
+  </head>
+  <body>
+    <!-- Loading indicator -->
+    <div id="loading">
+      <style>
+        body {
+          inset: 0;
+          overflow: hidden;
+          margin: 0;
+          padding: 0;
+          position: fixed;
+        }
+        #loading {
+          align-items: center;
+          display: flex;
+          height: 100%;
+          justify-content: center;
+          width: 100%;
+        }
+        #loading img {
+          animation: 1s ease-in-out 0s infinite rotate;
+          opacity: 0.7;
+        }
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      </style>
+      <img src="loading.gif" alt="Loading..." />
+    </div>
+
+    <script>
+      // Debug logging function
+      function debugLog(message) {
+        console.log(`[Debug] ${message}`);
+      }
+
+      window.addEventListener("load", async function (ev) {
+        debugLog("Window load event triggered");
+
+        try {
+          // Initialize Firebase
+          const firebaseConfig = {
+            apiKey: "AIzaSyAwZWpqLQLizT9b6hKcuucAiylXgq9actQ",
+            authDomain: "myapp-6ed81.firebaseapp.com",
+            projectId: "myapp-6ed81",
+            storageBucket: "myapp-6ed81.appspot.com",
+            messagingSenderId: "702431682405",
+            appId: "1:702431682405:web:b80f68ec981fe60bd1cb8c",
+            measurementId: "G-XWZL0LBZPN",
+          };
+
+          debugLog("Initializing Firebase");
+          firebase.initializeApp(firebaseConfig);
+          debugLog("Firebase initialized successfully");
+
+          // Initialize Flutter web
+          debugLog("Loading Flutter");
+          var loading = document.querySelector("#loading");
+
+          // Download main.dart.js
+          if (!_flutter) {
+            debugLog("Flutter runtime is not available");
+            throw new Error("Flutter runtime is not available");
+          }
+
+          debugLog("Starting Flutter initialization");
+          _flutter.loader.loadEntrypoint({
+            serviceWorker: {
+              serviceWorkerVersion: serviceWorkerVersion,
+            },
+            onEntrypointLoaded: function (engineInitializer) {
+              debugLog("Flutter entrypoint loaded");
+              engineInitializer.initializeEngine().then(function (appRunner) {
+                debugLog("Flutter engine initialized");
+                appRunner.runApp();
+                debugLog("Flutter app started");
+                if (loading) {
+                  loading.remove();
+                }
+              });
+            },
           });
+        } catch (error) {
+          debugLog("Error during initialization: " + error);
+          console.error("Initialization error:", error);
         }
       });
-    });
-  </script>
-</body>
+
+      function openCamera() {
+        // Create camera UI elements
+        const cameraContainer = document.createElement("div");
+        cameraContainer.style.position = "fixed";
+        cameraContainer.style.top = "0";
+        cameraContainer.style.left = "0";
+        cameraContainer.style.width = "100%";
+        cameraContainer.style.height = "100%";
+        cameraContainer.style.backgroundColor = "black";
+        cameraContainer.style.zIndex = "1000";
+        cameraContainer.style.display = "flex";
+        cameraContainer.style.flexDirection = "column";
+        cameraContainer.style.alignItems = "center";
+        cameraContainer.style.justifyContent = "center";
+
+        const video = document.createElement("video");
+        video.style.width = "100%";
+        video.style.maxHeight = "80%";
+        video.style.objectFit = "contain";
+        video.autoplay = true;
+        video.playsInline = true;
+
+        const buttonContainer = document.createElement("div");
+        buttonContainer.style.position = "absolute";
+        buttonContainer.style.bottom = "20px";
+        buttonContainer.style.width = "100%";
+        buttonContainer.style.display = "flex";
+        buttonContainer.style.justifyContent = "center";
+        buttonContainer.style.gap = "20px";
+
+        const captureButton = document.createElement("button");
+        captureButton.textContent = "Take Photo";
+        captureButton.style.padding = "12px 24px";
+        captureButton.style.fontSize = "16px";
+        captureButton.style.backgroundColor = "#2196F3";
+        captureButton.style.color = "white";
+        captureButton.style.border = "none";
+        captureButton.style.borderRadius = "4px";
+        captureButton.style.cursor = "pointer";
+
+        const closeButton = document.createElement("button");
+        closeButton.textContent = "Close";
+        closeButton.style.padding = "12px 24px";
+        closeButton.style.fontSize = "16px";
+        closeButton.style.backgroundColor = "#f44336";
+        closeButton.style.color = "white";
+        closeButton.style.border = "none";
+        closeButton.style.borderRadius = "4px";
+        closeButton.style.cursor = "pointer";
+
+        buttonContainer.appendChild(captureButton);
+        buttonContainer.appendChild(closeButton);
+        cameraContainer.appendChild(video);
+        cameraContainer.appendChild(buttonContainer);
+        document.body.appendChild(cameraContainer);
+
+        // Request camera access
+        navigator.mediaDevices
+          .getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+          })
+          .then((stream) => {
+            video.srcObject = stream;
+            const photos = [];
+
+            captureButton.onclick = () => {
+              const canvas = document.createElement("canvas");
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const context = canvas.getContext("2d");
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const photoData = canvas.toDataURL("image/jpeg", 0.85);
+              photos.push(photoData);
+
+              // Show success message
+              const successMessage = document.createElement("div");
+              successMessage.textContent = `Photo ${photos.length} captured!`;
+              successMessage.style.color = "white";
+              successMessage.style.position = "absolute";
+              successMessage.style.top = "20px";
+              successMessage.style.left = "50%";
+              successMessage.style.transform = "translateX(-50%)";
+              successMessage.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+              successMessage.style.padding = "8px 16px";
+              successMessage.style.borderRadius = "4px";
+              cameraContainer.appendChild(successMessage);
+              setTimeout(() => successMessage.remove(), 2000);
+            };
+
+            closeButton.onclick = () => {
+              stream.getTracks().forEach((track) => track.stop());
+              cameraContainer.remove();
+              if (typeof window.onPhotosCaptured === "function") {
+                window.onPhotosCaptured(photos);
+              }
+            };
+          })
+          .catch((error) => {
+            console.error("Error accessing camera:", error);
+            cameraContainer.remove();
+            if (typeof window.onPhotosCaptured === "function") {
+              window.onPhotosCaptured([]);
+            }
+          });
+      }
+
+      // Expose the function to the global scope
+      window.openCamera = openCamera;
+    </script>
+  </body>
 </html>

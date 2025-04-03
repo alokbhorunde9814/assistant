@@ -11,18 +11,27 @@ import 'utils/theme.dart';
 import 'utils/constants.dart';
 import 'firebase_options.dart';
 import 'widgets/vertex_ai_chat.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.web,
+      );
+    } else {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     print('Firebase initialized successfully');
-  } catch (e) {
+  } catch (e, stackTrace) {
     print('Failed to initialize Firebase: $e');
+    print('Stack trace: $stackTrace');
   }
+  
   runApp(const MyApp());
 }
 

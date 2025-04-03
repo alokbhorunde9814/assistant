@@ -11,6 +11,7 @@ import '../utils/error_handler.dart';
 import '../utils/theme.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/photo_capture_button.dart';
 
 class SubmitAssignmentScreen extends StatefulWidget {
   final AssignmentModel assignment;
@@ -215,11 +216,50 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   }
   
   Future<void> _captureImage() async {
-    // In a real app, this would use image_picker to capture images
-    // For now, just show a message that it's not implemented
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Camera capture is not implemented in this demo')),
-    );
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing camera...')),
+      );
+      
+      // The PhotoCaptureButton will handle the actual capture and upload
+      // We just need to wait for the result
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Take Photo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Use the camera button to take a photo'),
+              const SizedBox(height: 16),
+              PhotoCaptureButton(
+                onFileSelected: (url) {
+                  Navigator.pop(context, url);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+      
+      if (result != null) {
+        setState(() {
+          _selectedFiles.add(PlatformFile(
+            name: 'photo_${DateTime.now().millisecondsSinceEpoch}.pdf',
+            size: 0, // Size will be updated after upload
+            path: result,
+          ));
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo added successfully!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error capturing photo: $e')),
+      );
+    }
   }
   
   String _formatDueDate(DateTime date) {
