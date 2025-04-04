@@ -47,7 +47,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '702431682405',
     projectId: 'myapp-6ed81',
     authDomain: 'myapp-6ed81.firebaseapp.com',
-    storageBucket: 'myapp-6ed81.appspot.com',
+    storageBucket: 'myapp-6ed81.firebasestorage.app',
     measurementId: 'G-XWZL0LBZPN',
   );
 
