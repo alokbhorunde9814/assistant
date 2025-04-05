@@ -62,9 +62,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.of(context).pushReplacementNamed('/home');
         }
       }
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       setState(() {
-        if (e.toString().contains("SHA1") || e.toString().contains("SHA-1")) {
+        if (e.code == 'email-not-verified') {
+          _errorMessage = "Please verify your email before signing in. A verification email has been sent to your Google account.";
+        } else if (e.toString().contains("SHA1") || e.toString().contains("SHA-1")) {
           _errorMessage = "Missing SHA-1 fingerprint in Firebase. Please add your app's SHA-1 to Firebase console.";
           FirebaseHelper.showAndroidSignInTroubleshootingDialog(context);
         } else if (e.toString().contains("oauth_client") || 
@@ -73,8 +75,25 @@ class _LoginScreenState extends State<LoginScreen> {
           _errorMessage = "Google Sign-In not properly configured. Please check Firebase console.";
           FirebaseHelper.showGoogleSignInTroubleshootingDialog(context);
         } else {
-          _errorMessage = "Error signing in with Google: $e";
+          _errorMessage = "Error signing in with Google: ${e.message}";
         }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage ?? "An error occurred during Google sign-in"),
+          duration: const Duration(seconds: 10),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Error signing in with Google: $e";
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,6 +159,9 @@ class _LoginScreenState extends State<LoginScreen> {
             break;
           case 'invalid-email':
             _errorMessage = 'Email address is not valid.';
+            break;
+          case 'email-not-verified':
+            _errorMessage = 'Please verify your email before signing in. A new verification email has been sent.';
             break;
           default:
             _errorMessage = 'An error occurred: ${e.message}';
@@ -519,15 +541,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: 48,
                     child: OutlinedButton.icon(
-                      onPressed: kIsWeb
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Google Sign-In is only enabled for Android and iOS"),
-                              ),
-                            );
-                          }
-                        : (_isLoading ? null : _signInWithGoogle),
+                      onPressed: _isLoading ? null : _signInWithGoogle,
                       icon: Image.asset(
                         'assets/google_logo.png',
                         width: 24,
@@ -786,7 +800,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Account created successfully!")),
+          const SnackBar(
+            content: Text("Verification email sent! Please check your inbox and verify your email before signing in."),
+            duration: Duration(seconds: 5),
+          ),
         );
         Navigator.pop(context); // Go back to login screen
       }

@@ -36,21 +36,7 @@ class AuthWrapper extends StatelessWidget {
         // If user data exists, they're authenticated
         if (snapshot.hasData) {
           print('User is authenticated: ${snapshot.data?.uid}');
-          
-          // Use pushReplacement to replace the current route with HomeScreen
-          // This prevents stack build-up and back button issues
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
-          });
-          
-          // Show loading while navigating
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return const HomeScreen();
         }
         
         // Not authenticated, show login screen
