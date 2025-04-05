@@ -271,9 +271,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 title: const Text('Announcement'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Create announcement coming soon')),
-                  );
+                  _showCreateAnnouncementDialog();
                 },
               ),
               ListTile(
@@ -281,9 +279,7 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 title: const Text('Resource'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Upload resource coming soon')),
-                  );
+                  _showCreateResourceDialog();
                 },
               ),
               ListTile(
@@ -291,15 +287,259 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                 title: const Text('Quiz'),
                 onTap: () {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Create quiz coming soon')),
-                  );
+                  _showCreateQuizDialog();
                 },
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  // New methods for creating different content types
+  void _showCreateAnnouncementDialog() {
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Announcement'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                hintText: 'Enter announcement title',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: contentController,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Content',
+                hintText: 'Enter announcement content',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.isEmpty || contentController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill in all fields')),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              
+              try {
+                setState(() => _isLoading = true);
+                await _databaseService.createAnnouncement(
+                  classId: widget.classModel.id,
+                  title: titleController.text,
+                  content: contentController.text,
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Announcement created successfully!')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error creating announcement: $e')),
+                  );
+                }
+              } finally {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: classPrimaryColor,
+            ),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateResourceDialog() {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final urlController = TextEditingController();
+    ResourceType selectedType = ResourceType.document;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Resource'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Enter resource title',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Enter resource description',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: urlController,
+                  decoration: const InputDecoration(
+                    labelText: 'URL',
+                    hintText: 'Enter resource URL',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Resource Type:'),
+                DropdownButton<ResourceType>(
+                  value: selectedType,
+                  isExpanded: true,
+                  items: ResourceType.values.map((type) {
+                    return DropdownMenuItem<ResourceType>(
+                      value: type,
+                      child: Text(type.toString().split('.').last),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedType = value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (titleController.text.isEmpty || urlController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill in title and URL')),
+                  );
+                  return;
+                }
+                
+                Navigator.pop(context);
+                
+                try {
+                  this.setState(() => _isLoading = true);
+                  await _databaseService.createResource(
+                    classId: widget.classModel.id,
+                    title: titleController.text,
+                    description: descriptionController.text,
+                    url: urlController.text,
+                    type: selectedType,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Resource added successfully!')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error adding resource: $e')),
+                    );
+                  }
+                } finally {
+                  if (mounted) {
+                    this.setState(() => _isLoading = false);
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: classPrimaryColor,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  void _showCreateQuizDialog() {
+    final titleController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Quiz'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Quiz Title',
+                hintText: 'Enter quiz title',
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'The quiz builder will open where you can add questions and set quiz settings.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (titleController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a quiz title')),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Quiz creation interface will be available soon')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: classPrimaryColor,
+            ),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1836,113 +2076,627 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   }
 
   Widget _buildStudentsTab() {
-    // For teachers with students, show a loading indicator that will be replaced by navigation
-    if (widget.isTeacher && widget.classModel.studentCount > 0) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(classPrimaryColor),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Loading ${widget.classModel.studentCount} student${widget.classModel.studentCount == 1 ? '' : 's'}...',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+    if (widget.isTeacher) {
+      // Auto-navigate to ClassStudentsScreen
+      // Using a short delay to ensure build is complete
+      Future.delayed(Duration.zero, () {
+        if (mounted && _tabController.index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ClassStudentsScreen(
+                classModel: widget.classModel,
+                isTeacher: widget.isTeacher,
               ),
             ),
-          ],
-        ),
-      );
+          ).then((_) {
+            // If the user navigates back, switch to the first tab
+            if (_tabController.index == 2 && mounted) {
+              _tabController.animateTo(0);
+            }
+          });
+        }
+      });
     }
     
-    // For empty classes or students viewing the screen
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.people_outline,
-            size: 64,
-            color: classPrimaryColor.withOpacity(0.7),
-          ),
+          const CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text(
-            widget.classModel.studentCount > 0
-                ? 'View ${widget.classModel.studentCount} student${widget.classModel.studentCount == 1 ? '' : 's'}'
-                : 'No students enrolled yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (widget.classModel.studentCount > 0)
-            CustomButton(
-              label: 'View Student List',
-              icon: Icons.people,
-              onPressed: _navigateToStudentsScreen,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: classGradientColors,
-              ),
-            )
-          else
-            CustomButton(
-              label: 'Share Class Code',
-              icon: Icons.share,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Class code: ${widget.classModel.code}')),
-                );
-              },
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: classGradientColors,
-              ),
-            ),
+          const Text('Loading students...'),
         ],
-      ),
-    );
-  }
-
-  void _navigateToStudentsScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ClassStudentsScreen(
-          classModel: widget.classModel,
-          isTeacher: widget.isTeacher,
-        ),
       ),
     );
   }
 
   Widget _buildResourcesTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.book_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No resources available yet',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
+    return StreamBuilder<List<ResourceModel>>(
+      stream: _databaseService.getResourcesForClass(widget.classModel.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Colors.red.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading resources',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
             ),
+          );
+        }
+        
+        final resources = snapshot.data ?? [];
+        
+        if (resources.isEmpty) {
+          // No resources, show empty state
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.menu_book_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No resources available yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (widget.isTeacher)
+                  CustomButton(
+                    label: 'Add Resource',
+                    icon: Icons.add,
+                    onPressed: () {
+                      _showCreateResourceDialog();
+                    },
+                  ),
+              ],
+            ),
+          );
+        }
+        
+        // Group resources by type
+        final Map<ResourceType, List<ResourceModel>> groupedResources = {};
+        for (var resource in resources) {
+          if (!groupedResources.containsKey(resource.type)) {
+            groupedResources[resource.type] = [];
+          }
+          groupedResources[resource.type]!.add(resource);
+        }
+        
+        // Display resources
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with resource count and add button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${resources.length} Resource${resources.length == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                  if (widget.isTeacher)
+                    CustomButton(
+                      label: 'Add',
+                      icon: Icons.add,
+                      type: ButtonType.outline,
+                      onPressed: () {
+                        _showCreateResourceDialog();
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // List of resources by type
+              Expanded(
+                child: ListView.builder(
+                  itemCount: groupedResources.keys.length,
+                  itemBuilder: (context, index) {
+                    final resourceType = groupedResources.keys.elementAt(index);
+                    final resourceList = groupedResources[resourceType]!;
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(
+                            _getResourceTypeDisplayName(resourceType),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: classPrimaryColor,
+                            ),
+                          ),
+                        ),
+                        ...resourceList.map((resource) => _buildResourceItem(resource)),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getResourceTypeDisplayName(ResourceType type) {
+    switch (type) {
+      case ResourceType.document:
+        return 'Documents';
+      case ResourceType.video:
+        return 'Videos';
+      case ResourceType.link:
+        return 'Web Links';
+      case ResourceType.presentation:
+        return 'Presentations';
+      case ResourceType.worksheet:
+        return 'Worksheets';
+      case ResourceType.other:
+        return 'Other Resources';
+      default:
+        return 'Resources';
+    }
+  }
+
+  Widget _buildResourceItem(ResourceModel resource) {
+    IconData resourceIcon;
+    Color resourceColor;
+    
+    switch (resource.type) {
+      case ResourceType.document:
+        resourceIcon = Icons.description;
+        resourceColor = Colors.blue;
+        break;
+      case ResourceType.video:
+        resourceIcon = Icons.video_library;
+        resourceColor = Colors.red;
+        break;
+      case ResourceType.link:
+        resourceIcon = Icons.link;
+        resourceColor = Colors.teal;
+        break;
+      case ResourceType.presentation:
+        resourceIcon = Icons.slideshow;
+        resourceColor = Colors.orange;
+        break;
+      case ResourceType.worksheet:
+        resourceIcon = Icons.assignment;
+        resourceColor = Colors.purple;
+        break;
+      case ResourceType.other:
+      default:
+        resourceIcon = Icons.folder;
+        resourceColor = Colors.grey;
+        break;
+    }
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: resourceColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            resourceIcon,
+            color: resourceColor,
+          ),
+        ),
+        title: Text(
+          resource.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: resource.description.isNotEmpty
+            ? Text(
+                resource.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              )
+            : null,
+        trailing: const Icon(Icons.open_in_new),
+        onTap: () {
+          _openResourceUrl(resource.url, resource.title);
+        },
+      ),
+    );
+  }
+
+  Future<void> _openResourceUrl(String url, String title) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Opening $title...')),
+      );
+      // In a real app, you would use a URL launcher package to open the link
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cannot open URL: $e')),
+      );
+    }
+  }
+
+  Widget _buildDoubtsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // AI Help Card
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: classPrimaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.psychology,
+                          color: classPrimaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Text(
+                          'AI Learning Assistant',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Get instant help with your questions, assignment clarifications, or any topic related to this class.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Ask a question...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade300,
+                        ),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          Icons.send,
+                          color: classPrimaryColor,
+                        ),
+                        onPressed: () {
+                          _askAIQuestion();
+                        },
+                      ),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Quick Help Categories
+              _buildSectionHeader(
+            title: 'Quick Help Categories',
+                actionText: null,
+              ),
+              
+              const SizedBox(height: 16),
+              
+          // Grid of help categories
+          GridView.count(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+                  children: [
+              _buildQuickHelpCard(
+                title: 'Class Topics',
+                icon: Icons.class_,
+                color: Colors.blue,
+                onTap: () => _showHelpCategoryDialog('Class Topics'),
+              ),
+              _buildQuickHelpCard(
+                title: 'Assignment Help',
+                icon: Icons.assignment,
+                color: Colors.orange,
+                onTap: () => _showHelpCategoryDialog('Assignment Help'),
+              ),
+              _buildQuickHelpCard(
+                title: 'Study Tips',
+                icon: Icons.psychology,
+                color: Colors.green,
+                onTap: () => _showHelpCategoryDialog('Study Tips'),
+              ),
+              _buildQuickHelpCard(
+                title: 'Quiz Prep',
+                icon: Icons.quiz,
+                color: Colors.purple,
+                onTap: () => _showHelpCategoryDialog('Quiz Prep'),
+              ),
+            ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+          // Previous Questions
+              _buildSectionHeader(
+            title: 'Your Previous Questions',
+                actionText: null,
+              ),
+              
+              const SizedBox(height: 16),
+              
+          // Empty state or example questions
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                  Icons.help_outline,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                  'No questions yet',
+                      style: TextStyle(
+                    fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                Text(
+                  'Ask the AI assistant anything about your class',
+                        style: TextStyle(
+                    fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                  textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+      ),
+    );
+  }
+
+  Widget _buildQuickHelpCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 12),
+                  Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  void _showHelpCategoryDialog(String category) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(category),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+              'Sample questions to ask:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...(_getExampleQuestions(category).map((q) => 
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.question_answer, size: 16, color: classPrimaryColor),
+                title: Text(q),
+                onTap: () {
+                  Navigator.pop(context);
+                  _askQuestion(q);
+                },
+              )
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),
+    );
+  }
+
+  List<String> _getExampleQuestions(String category) {
+    switch (category) {
+      case 'Class Topics':
+        return [
+          'Explain the concept of ${widget.classModel.subject} in simple terms',
+          'What are the main topics covered in ${widget.classModel.name}?',
+          'How does ${widget.classModel.subject} relate to real-world applications?',
+        ];
+      case 'Assignment Help':
+        return [
+          'How do I approach the current assignment?',
+          'What are some tips for completing the homework?',
+          'Can you explain the requirements for the project?',
+        ];
+      case 'Study Tips':
+        return [
+          'What are effective ways to study ${widget.classModel.subject}?',
+          'How can I prepare for the upcoming test?',
+          'What learning techniques work best for this topic?',
+        ];
+      case 'Quiz Prep':
+        return [
+          'What topics should I focus on for the next quiz?',
+          'Can you create a practice quiz on ${widget.classModel.subject}?',
+          'What are common mistakes students make in ${widget.classModel.subject} quizzes?',
+        ];
+      default:
+        return [
+          'How can I learn more about ${widget.classModel.subject}?',
+          'What resources do you recommend for this class?',
+          'Can you explain difficult concepts in ${widget.classModel.name}?',
+        ];
+    }
+  }
+
+  void _askQuestion(String question) {
+    // Show a demonstration dialog with sample response
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+            const Text('AI Response'),
+            const SizedBox(height: 4),
+                              Text(
+              'Q: $question',
+                                style: TextStyle(
+                                  fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+        content: const Text(
+          'I\'ll be happy to help with that! The answer would be displayed here with relevant information from your class materials and general knowledge about the subject. This feature will be fully implemented in a future update.',
+                        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+                    ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: classPrimaryColor,
+                  ),
+            child: const Text('Thanks!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _askAIQuestion() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Your question has been sent to the AI Assistant. Responses will be available soon!')),
     );
   }
 
@@ -2013,65 +2767,6 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
     );
   }
 
-  Widget _buildFeedbackTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.auto_awesome,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'AI Feedback',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'View and analyze feedback for your assignments',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            label: 'View Feedback',
-            icon: Icons.visibility,
-            onPressed: () {
-              // Navigate to feedback screen
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FeedbackScreen(
-                    feedback: {
-                      'pdfName': 'Assignment_Submission.pdf',
-                      'pageCount': 5,
-                      'score': 85,
-                      'feedbackPoints': [
-                        'Good understanding of the topic',
-                        'Well-structured arguments',
-                        'Could improve on examples',
-                      ],
-                      'suggestedImprovements': 'Try to include more real-world examples and applications of the concepts discussed.',
-                      'rawFeedback': 'Overall, this is a well-written assignment that demonstrates a good understanding of the subject matter. The arguments are well-structured and supported with relevant information. However, including more real-world examples would strengthen the analysis.',
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildFeatureCard({
     required IconData icon,
     required String title,
@@ -2124,6 +2819,46 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInsightStatistic({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 } 
