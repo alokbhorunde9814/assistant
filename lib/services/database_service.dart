@@ -411,8 +411,6 @@ class DatabaseService {
     required String description,
     required String url,
     required ResourceType type,
-    bool isAiRecommended = false,
-    Map<String, dynamic> aiData = const {},
   }) async {
     try {
       // Verify the user is the class owner
@@ -433,12 +431,9 @@ class DatabaseService {
         title: title,
         description: description,
         url: url,
-        authorId: _currentUserId,
-        authorName: _currentUserName,
-        createdAt: DateTime.now(),
         type: type,
-        isAiRecommended: isAiRecommended,
-        aiData: aiData,
+        createdAt: DateTime.now(),
+        createdBy: _currentUserId,
       ).toFirestore();
       
       // Add the resource to Firestore

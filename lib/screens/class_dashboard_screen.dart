@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/class_model.dart';
 import '../models/assignment_model.dart';
+import '../models/resource_model.dart';
 import '../screens/class_students_screen.dart';
 import '../screens/create_assignment_screen.dart';
 import '../screens/submit_assignment_screen.dart';
@@ -2725,44 +2726,154 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
           );
   }
 
-  Widget _buildDoubtsTab() {
-    return Center(
+  Widget _buildFeedbackTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.help_outline,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'AI-powered doubt solver',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
+          // Feedback Overview Card
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: classPrimaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.feedback,
+                          color: classPrimaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Text(
+                          'Assignment Feedback',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'View AI-generated feedback for your assignments and track your progress.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FeedbackScreen(
+                            feedback: {
+                              'pdfName': 'Assignment_Submission.pdf',
+                              'pageCount': 5,
+                              'score': 85,
+                              'feedbackPoints': [
+                                'Excellent understanding of core concepts',
+                                'Clear and well-structured explanations',
+                                'Good use of examples to support arguments',
+                              ],
+                              'suggestedImprovements': 'Consider adding more real-world applications and expanding on the theoretical framework.',
+                              'rawFeedback': 'Overall, this is a strong submission that demonstrates a good grasp of the subject matter. The analysis is thorough and well-supported with relevant examples. To improve further, consider incorporating more contemporary applications and expanding the theoretical foundation.',
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: classPrimaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('View Feedback'),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              'Ask any question about your class material and get instant answers',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
+          
           const SizedBox(height: 24),
-          CustomButton(
-            label: 'Ask a Question',
-            icon: Icons.question_answer,
-            onPressed: () {
+          
+          // Recent Feedback Section
+          _buildSectionHeader(
+            title: 'Recent Feedback',
+            actionText: 'View All',
+            onActionTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('AI doubt solver coming soon')),
+                const SnackBar(content: Text('View all feedback coming soon')),
               );
             },
           ),
+          
+          const SizedBox(height: 16),
+          
+          // Empty state for feedback
+          Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.feedback_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Feedback Yet',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Submit assignments to receive AI-generated feedback',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  // Add this method to handle student navigation
+  void _navigateToStudentsScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClassStudentsScreen(
+          classModel: widget.classModel,
+          isTeacher: widget.isTeacher,
+        ),
       ),
     );
   }

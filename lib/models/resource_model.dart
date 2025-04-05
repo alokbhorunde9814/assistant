@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 
 enum ResourceType {
   document,
-  link,
   video,
-  image,
-  audio,
+  link,
+  presentation,
+  worksheet,
   other,
 }
 
@@ -16,12 +16,9 @@ class ResourceModel {
   final String title;
   final String description;
   final String url;
-  final String authorId;
-  final String authorName;
-  final DateTime createdAt;
   final ResourceType type;
-  final bool isAiRecommended;
-  final Map<String, dynamic> aiData; // AI metadata about the resource
+  final DateTime createdAt;
+  final String createdBy;
 
   ResourceModel({
     required this.id,
@@ -29,13 +26,39 @@ class ResourceModel {
     required this.title,
     required this.description,
     required this.url,
-    required this.authorId,
-    required this.authorName,
-    required this.createdAt,
     required this.type,
-    this.isAiRecommended = false,
-    this.aiData = const {},
+    required this.createdAt,
+    required this.createdBy,
   });
+
+  factory ResourceModel.fromMap(Map<String, dynamic> map) {
+    return ResourceModel(
+      id: map['id'] as String,
+      classId: map['classId'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String,
+      url: map['url'] as String,
+      type: ResourceType.values.firstWhere(
+        (e) => e.toString() == 'ResourceType.${map['type']}',
+        orElse: () => ResourceType.other,
+      ),
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      createdBy: map['createdBy'] as String,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'classId': classId,
+      'title': title,
+      'description': description,
+      'url': url,
+      'type': type.toString().split('.').last,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'createdBy': createdBy,
+    };
+  }
 
   // Create an empty resource with default values
   factory ResourceModel.empty() {
@@ -45,10 +68,9 @@ class ResourceModel {
       title: '',
       description: '',
       url: '',
-      authorId: '',
-      authorName: '',
-      createdAt: DateTime.now(),
       type: ResourceType.document,
+      createdAt: DateTime.now(),
+      createdBy: '',
     );
   }
 
@@ -69,11 +91,11 @@ class ResourceModel {
       case 'video':
         resourceType = ResourceType.video;
         break;
-      case 'image':
-        resourceType = ResourceType.image;
+      case 'presentation':
+        resourceType = ResourceType.presentation;
         break;
-      case 'audio':
-        resourceType = ResourceType.audio;
+      case 'worksheet':
+        resourceType = ResourceType.worksheet;
         break;
       default:
         resourceType = ResourceType.other;
@@ -85,12 +107,9 @@ class ResourceModel {
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       url: data['url'] ?? '',
-      authorId: data['authorId'] ?? '',
-      authorName: data['authorName'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       type: resourceType,
-      isAiRecommended: data['isAiRecommended'] ?? false,
-      aiData: data['aiData'] ?? {},
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdBy: data['createdBy'] ?? '',
     );
   }
 
@@ -108,11 +127,11 @@ class ResourceModel {
       case ResourceType.video:
         typeStr = 'video';
         break;
-      case ResourceType.image:
-        typeStr = 'image';
+      case ResourceType.presentation:
+        typeStr = 'presentation';
         break;
-      case ResourceType.audio:
-        typeStr = 'audio';
+      case ResourceType.worksheet:
+        typeStr = 'worksheet';
         break;
       case ResourceType.other:
         typeStr = 'other';
@@ -124,12 +143,9 @@ class ResourceModel {
       'title': title,
       'description': description,
       'url': url,
-      'authorId': authorId,
-      'authorName': authorName,
-      'createdAt': Timestamp.fromDate(createdAt),
       'type': typeStr,
-      'isAiRecommended': isAiRecommended,
-      'aiData': aiData,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'createdBy': createdBy,
     };
   }
 
@@ -140,12 +156,9 @@ class ResourceModel {
     String? title,
     String? description,
     String? url,
-    String? authorId,
-    String? authorName,
-    DateTime? createdAt,
     ResourceType? type,
-    bool? isAiRecommended,
-    Map<String, dynamic>? aiData,
+    DateTime? createdAt,
+    String? createdBy,
   }) {
     return ResourceModel(
       id: id ?? this.id,
@@ -153,12 +166,9 @@ class ResourceModel {
       title: title ?? this.title,
       description: description ?? this.description,
       url: url ?? this.url,
-      authorId: authorId ?? this.authorId,
-      authorName: authorName ?? this.authorName,
-      createdAt: createdAt ?? this.createdAt,
       type: type ?? this.type,
-      isAiRecommended: isAiRecommended ?? this.isAiRecommended,
-      aiData: aiData ?? this.aiData,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 
@@ -171,10 +181,10 @@ class ResourceModel {
         return Icons.link;
       case ResourceType.video:
         return Icons.video_library;
-      case ResourceType.image:
-        return Icons.image;
-      case ResourceType.audio:
-        return Icons.audio_file;
+      case ResourceType.presentation:
+        return Icons.slideshow;
+      case ResourceType.worksheet:
+        return Icons.assignment;
       case ResourceType.other:
         return Icons.attach_file;
     }
