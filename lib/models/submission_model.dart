@@ -28,6 +28,7 @@ class SubmissionModel {
   final Map<String, dynamic>? aiData;
   final String? notes;
   final Map<String, dynamic>? aiFeedback;
+  final Map<String, int> pageCounts;
 
   SubmissionModel({
     required this.id,
@@ -49,6 +50,7 @@ class SubmissionModel {
     this.aiData,
     this.notes,
     this.aiFeedback,
+    this.pageCounts = const {},
   });
   
   // Create an empty submission with default values
@@ -86,6 +88,7 @@ class SubmissionModel {
       aiData: data['aiData'] as Map<String, dynamic>?,
       notes: data['notes'],
       aiFeedback: data['aiFeedback'] as Map<String, dynamic>?,
+      pageCounts: Map<String, int>.from(data['pageCounts'] ?? {}),
     );
   }
   
@@ -110,6 +113,7 @@ class SubmissionModel {
       'aiData': aiData,
       'notes': notes,
       'aiFeedback': aiFeedback,
+      'pageCounts': pageCounts,
     };
   }
   
@@ -134,6 +138,7 @@ class SubmissionModel {
     Map<String, dynamic>? aiData,
     String? notes,
     Map<String, dynamic>? aiFeedback,
+    Map<String, int>? pageCounts,
   }) {
     return SubmissionModel(
       id: id ?? this.id,
@@ -155,6 +160,7 @@ class SubmissionModel {
       aiData: aiData ?? this.aiData,
       notes: notes ?? this.notes,
       aiFeedback: aiFeedback ?? this.aiFeedback,
+      pageCounts: pageCounts ?? this.pageCounts,
     );
   }
   

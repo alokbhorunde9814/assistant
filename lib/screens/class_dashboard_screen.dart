@@ -6,6 +6,7 @@ import '../screens/class_students_screen.dart';
 import '../screens/create_assignment_screen.dart';
 import '../screens/submit_assignment_screen.dart';
 import '../screens/assignment_detail_screen.dart';
+import '../screens/feedback_screen.dart';
 import '../services/database_service.dart';
 import '../utils/theme.dart';
 import '../widgets/custom_button.dart';
@@ -30,8 +31,8 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
   late TabController _tabController;
   bool _isLoading = false;
 
-  final List<String> _teacherTabs = ['Dashboard', 'Assignments', 'Students', 'Insights'];
-  final List<String> _studentTabs = ['Dashboard', 'Assignments', 'Resources', 'Doubts'];
+  final List<String> _teacherTabs = ['Dashboard', 'Assignments', 'Students', 'Feedback', 'Insights'];
+  final List<String> _studentTabs = ['Dashboard', 'Assignments', 'Resources', 'Feedback', 'Doubts'];
 
   // Get class-specific gradient colors based on class name
   List<Color> get classGradientColors {
@@ -144,12 +145,14 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
                       _buildTeacherDashboard(),
                       _buildAssignmentsTab(),
                       _buildStudentsTab(),
+                      _buildFeedbackTab(),
                       _buildInsightsTab(),
                     ]
                   : [
                       _buildStudentDashboard(),
                       _buildAssignmentsTab(),
                       _buildResourcesTab(),
+                      _buildFeedbackTab(),
                       _buildDoubtsTab(),
                     ],
             ),
@@ -2002,6 +2005,65 @@ class _ClassDashboardScreenState extends State<ClassDashboardScreen> with Single
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('AI doubt solver coming soon')),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeedbackTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.auto_awesome,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'AI Feedback',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'View and analyze feedback for your assignments',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          CustomButton(
+            label: 'View Feedback',
+            icon: Icons.visibility,
+            onPressed: () {
+              // Navigate to feedback screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FeedbackScreen(
+                    feedback: {
+                      'pdfName': 'Assignment_Submission.pdf',
+                      'pageCount': 5,
+                      'score': 85,
+                      'feedbackPoints': [
+                        'Good understanding of the topic',
+                        'Well-structured arguments',
+                        'Could improve on examples',
+                      ],
+                      'suggestedImprovements': 'Try to include more real-world examples and applications of the concepts discussed.',
+                      'rawFeedback': 'Overall, this is a well-written assignment that demonstrates a good understanding of the subject matter. The arguments are well-structured and supported with relevant information. However, including more real-world examples would strengthen the analysis.',
+                    },
+                  ),
+                ),
               );
             },
           ),

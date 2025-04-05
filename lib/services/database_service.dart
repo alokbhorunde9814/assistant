@@ -605,56 +605,45 @@ class DatabaseService {
     required List<String> fileUrls,
     required List<String> fileNames,
     required List<String> filePaths,
-    String content = '',
-    double points = 0,
+    String? content,
+    required double points,
+    Map<String, int>? pageCounts,
   }) async {
     try {
-      // Get assignment details
-      final assignmentDoc = await _assignmentsCollection.doc(assignmentId).get();
-      if (!assignmentDoc.exists) {
-        throw Exception('Assignment not found');
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not logged in');
       }
-      
-      final assignment = AssignmentModel.fromFirestore(assignmentDoc);
-      
-      // Check if user is in the class
-      final classDoc = await _classesCollection.doc(classId).get();
-      if (!classDoc.exists) {
-        throw Exception('Class not found');
-      }
-      
-      final classModel = ClassModel.fromFirestore(classDoc);
-      if (!classModel.hasStudent(_currentUserId)) {
-        throw Exception('You are not a member of this class');
-      }
-      
+
       // Create submission data
       final submissionData = {
-        'classId': classId,
         'assignmentId': assignmentId,
-        'studentId': _currentUserId,
-        'studentName': _currentUserName,
-        'studentPhotoUrl': _auth.currentUser?.photoURL,
-        'content': content,
+        'classId': classId,
+        'studentId': currentUser.uid,
+        'studentName': currentUser.displayName ?? currentUser.email ?? 'Unknown',
         'fileUrls': fileUrls,
         'fileNames': fileNames,
         'filePaths': filePaths,
-        'submittedAt': Timestamp.now(),
-        'isGraded': false,
+        'content': content ?? '',
         'points': points,
-        'isAiFeedbackGenerated': false,
-        'isAiFeedbackReviewed': false,
+        'score': 0.0,
+        'status': 'submitted',
+        'submittedAt': FieldValue.serverTimestamp(),
+        'gradedAt': null,
+        'feedback': null,
+        'aiFeedback': null,
+        'pageCounts': pageCounts ?? {},
       };
-      
+
       // Add submission to Firestore
       final docRef = await _submissionsCollection.add(submissionData);
       
-      // Update submission with its ID
+      // Update the submission with its document ID
       await docRef.update({'id': docRef.id});
       
-      // Get the created submission
-      final submissionDoc = await docRef.get();
-      return SubmissionModel.fromFirestore(submissionDoc);
+      // Get the updated submission
+      final docSnapshot = await docRef.get();
+      return SubmissionModel.fromFirestore(docSnapshot);
     } catch (e) {
       print('Error submitting assignment: $e');
       rethrow;

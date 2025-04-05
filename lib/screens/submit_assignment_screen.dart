@@ -1,8 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../models/assignment_model.dart';
 import '../models/submission_model.dart';
 import '../services/database_service.dart';
@@ -12,6 +16,10 @@ import '../utils/theme.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/photo_capture_button.dart';
+import '../services/pdf_processing_service.dart';
+import '../services/gemini_service.dart';
+import 'feedback_screen.dart';
+import '../config/api_config.dart';
 
 class SubmitAssignmentScreen extends StatefulWidget {
   final AssignmentModel assignment;
@@ -112,16 +120,100 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
     
     setState(() {
       _isLoading = true;
-      _uploadingFiles = true;
       _errorMessage = null;
     });
     
     try {
+      // Initialize services
+      final geminiService = GeminiService();
+      final pdfProcessingService = PdfProcessingService(geminiService: geminiService);
+      
+      // Count pages for PDF files
+      Map<String, int> filePageCounts = {};
+      
+      for (var file in _selectedFiles) {
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+          try {
+            if (kIsWeb) {
+              // For web platform
+              if (file.bytes != null) {
+                print('\n==============================================');
+                print('STARTING PDF PROCESSING');
+                print('==============================================\n');
+                
+                print('📄 Processing PDF file: ${file.name}');
+                print('📦 File bytes available, size: ${(file.bytes!.length / 1024).toStringAsFixed(2)} KB');
+                
+                // Process PDF and extract images/text
+                final result = await pdfProcessingService.processPdf(file.bytes!);
+                final pageCount = result['pageCount'];
+                filePageCounts[file.name] = pageCount;
+                
+                print('\n📊 PDF Analysis Results:');
+                print('-------------------');
+                print('Total Pages: $pageCount');
+                print('Total Images Found: ${result['images'].length}');
+                print('Total Text Blocks Extracted: ${result['texts'].length}');
+                
+                // Print details for each page
+                for (int i = 0; i < pageCount; i++) {
+                  final pageImages = result['images'].where((img) => img['page'] == i + 1).toList();
+                  print('\n📑 Page ${i + 1}:');
+                  print('  Images: ${pageImages.length}');
+                  for (var img in pageImages) {
+                    print('    Image ${img['imageIndex'] + 1}: ${img['width']}x${img['height']}');
+                  }
+                }
+                
+                // Print extracted text
+                if (result['texts'].isNotEmpty) {
+                  print('\n📝 Extracted Text:');
+                  print('-------------------');
+                  for (var text in result['texts']) {
+                    print(text);
+                  }
+                }
+                
+                print('\n==============================================');
+                print('PDF PROCESSING COMPLETE - STARTING UPLOAD');
+                print('==============================================\n');
+              } else {
+                print('❌ Error: No bytes available for ${file.name}');
+                filePageCounts[file.name] = 0;
+              }
+            } else {
+              // For non-web platforms
+              final bytes = await File(file.path!).readAsBytes();
+              print('📦 File bytes loaded, size: ${(bytes.length / 1024).toStringAsFixed(2)} KB');
+              final document = PdfDocument(inputBytes: bytes);
+              final pageCount = document.pages.count;
+              filePageCounts[file.name] = pageCount;
+              print('✅ PDF File: ${file.name} has $pageCount pages');
+              document.dispose();
+            }
+          } catch (e) {
+            print('❌ Error processing PDF ${file.name}: $e');
+            filePageCounts[file.name] = 0;
+          }
+        } else {
+          print('\n📎 Non-PDF File: ${file.name} (processing not applicable)');
+        }
+      }
+      
+      // Delay before starting upload to ensure terminal output is visible
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Start upload process
+      setState(() {
+        _uploadingFiles = true;
+      });
+
       // Upload the files to Firebase Storage
       final uploadResult = await _fileService.uploadFiles(
         _selectedFiles,
         widget.assignment.id,
         widget.assignment.classId,
+        pageCounts: filePageCounts,
       );
       
       setState(() {
@@ -137,6 +229,7 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
         filePaths: uploadResult['paths']!,
         content: _notesController.text,
         points: widget.assignment.points.toDouble(),
+        pageCounts: filePageCounts,
       );
       
       setState(() {
@@ -268,6 +361,10 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   
   @override
   Widget build(BuildContext context) {
+    // Initialize services
+    final geminiService = GeminiService();
+    final pdfProcessingService = PdfProcessingService(geminiService: geminiService);
+
     final bool isOverdue = widget.assignment.dueDate?.isBefore(DateTime.now()) ?? false;
     final bool canSubmit = !isOverdue || widget.allowResubmit;
     final bool showResubmitOption = _hasSubmitted && widget.allowResubmit;
@@ -756,8 +853,8 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
   }
   
   Widget _buildAiFeedbackCard() {
-    final aiFeedback = _latestSubmission?.aiFeedback;
-    if (aiFeedback == null) return const SizedBox.shrink();
+    final feedback = _latestSubmission?.aiFeedback;
+    if (feedback == null) return const SizedBox.shrink();
     
     return Card(
       elevation: 2,
@@ -780,32 +877,45 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const Spacer(),
+                TextButton.icon(
+                  icon: const Icon(Icons.visibility),
+                  label: const Text('View Details'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FeedbackScreen(feedback: feedback),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             const Divider(height: 24),
-            if (aiFeedback['score'] != null) ...[
+            if (feedback['score'] != null) ...[
               Row(
                 children: [
                   const Icon(Icons.score, size: 18, color: Colors.grey),
                   const SizedBox(width: 8),
                   Text(
-                    'Score: ${aiFeedback['score']}%',
+                    'Score: ${feedback['score']}%',
                     style: const TextStyle(fontSize: 15),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
             ],
-            if (aiFeedback['feedbackPoints'] != null) ...[
+            if (feedback['feedbackPoints'] != null) ...[
               const Text(
-                'Feedback Points:',
+                'Key Points:',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              ...(aiFeedback['feedbackPoints'] as List).map((point) {
+              ...(feedback['feedbackPoints'] as List).take(3).map((point) {
                 return Padding(
                   padding: const EdgeInsets.only(left: 8, bottom: 8),
                   child: Row(
@@ -823,21 +933,6 @@ class _SubmitAssignmentScreenState extends State<SubmitAssignmentScreen> {
                   ),
                 );
               }).toList(),
-            ],
-            if (aiFeedback['suggestedImprovements'] != null) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Suggested Improvements:',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                aiFeedback['suggestedImprovements'].toString(),
-                style: const TextStyle(fontSize: 14),
-              ),
             ],
           ],
         ),
