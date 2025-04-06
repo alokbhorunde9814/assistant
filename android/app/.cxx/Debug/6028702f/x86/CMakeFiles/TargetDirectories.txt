@@ -1,0 +1,2 @@
+C:/Users/prasa/OneDrive/Desktop/Projects/AI/assistant/android/app/.cxx/Debug/6028702f/x86/CMakeFiles/edit_cache.dir
+C:/Users/prasa/OneDrive/Desktop/Projects/AI/assistant/android/app/.cxx/Debug/6028702f/x86/CMakeFiles/rebuild_cache.dir

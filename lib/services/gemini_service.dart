@@ -1,11 +1,22 @@
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../config/api_config.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'dart:typed_data';
+import 'dart:convert';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 class GeminiService {
   final String apiKey;
+  final GenerativeModel _model;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  GeminiService({String? apiKey}) : apiKey = apiKey ?? ApiConfig.geminiApiKey;
+  GeminiService({String? apiKey}) : apiKey = apiKey ?? ApiConfig.geminiApiKey, _model = GenerativeModel(
+    model: 'gemini-pro-vision',
+    apiKey: 'YOUR_GEMINI_API_KEY',
+  );
 
   Future<Map<String, dynamic>> generateFeedback(String textFilePath) async {
     try {
@@ -90,6 +101,59 @@ class GeminiService {
         'error': 'Error generating feedback: $e',
         'rawFeedback': 'Error generating feedback: $e',
       };
+    }
+  }
+
+  Future<String> analyzeFile(PlatformFile file) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      debugPrint('Starting file analysis for: ${file.name}');
+      
+      // Get file bytes
+      Uint8List fileBytes;
+      if (kIsWeb) {
+        if (file.bytes == null) {
+          throw Exception('File bytes are null');
+        }
+        fileBytes = file.bytes!;
+      } else {
+        if (file.path == null) {
+          throw Exception('File path is null');
+        }
+        final fileObj = File(file.path!);
+        fileBytes = await fileObj.readAsBytes();
+      }
+
+      // Generate feedback
+      final prompt = '''
+Please analyze this submission and provide detailed feedback:
+1. Content Quality: Evaluate the overall quality of the submission
+2. Structure: Comment on the organization and presentation
+3. Areas for Improvement: Suggest specific improvements
+4. Strengths: Highlight what was done well
+5. Visual Elements: If there are images or visual content, analyze their relevance and quality
+
+File Name: ${file.name}
+File Type: ${file.extension}
+File Size: ${(file.size / 1024).toStringAsFixed(2)} KB
+''';
+
+      final content = [
+        Content.multi([
+          TextPart(prompt),
+          DataPart('image/jpeg', fileBytes),
+        ])
+      ];
+
+      final response = await _model.generateContent(content);
+      return response.text ?? 'No feedback generated';
+    } catch (e) {
+      debugPrint('Error analyzing file: $e');
+      rethrow;
     }
   }
 } 
