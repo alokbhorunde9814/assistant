@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: const Text(
-          'AI Teacher Assistant', 
+          'Smart Kaksha', 
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,

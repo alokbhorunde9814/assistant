@@ -136,3 +136,5 @@ flutter:
   assets:
     - assets/google_logo.png
     - assets/icons/
+    - assets/images/
+    - assets/images/k_logo.png.jpg

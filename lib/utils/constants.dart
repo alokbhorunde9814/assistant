@@ -1,6 +1,6 @@
 class AppConstants {
   // App Information
-  static const String appName = 'AI Teacher Assistant';
+  static const String appName = 'Smart Kaksha';
   static const String appVersion = '1.0.0';
   
   // Routes
